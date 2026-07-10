@@ -105,6 +105,7 @@ async function loadCollected() {
         all.forEach(function(s) {
             if (s.status === 'done') collectedMap[s.name] = true;
         });
+        console.log('Supabase加载了 '+all.length+' 条采集记录');
         refreshAllMarkers();
     } catch(e) {
         console.log('Supabase 加载失败，使用空状态:', e.message);
