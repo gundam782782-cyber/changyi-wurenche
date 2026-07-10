@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>昌邑市无人车调度 — 方案A：全局单环线（1车）</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#eee;height:100vh;overflow:hidden}
+#container{display:flex;height:100vh}
+#map{flex:1;min-width:0}
+#panel{width:380px;background:#16213e;overflow-y:auto;padding:12px;border-left:2px solid #0f3460;flex-shrink:0}
+h2{font-size:17px;margin-bottom:4px;color:#e94560}
+.stat{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid #1a1a2e}
+.stat span:last-child{color:#e94560;font-weight:bold}
+.zone{background:#0f3460;border-radius:6px;padding:10px;margin:8px 0}
+.zone h4{font-size:13px;color:#4ecdc4;margin-bottom:4px}
+.store-list{font-size:11px;line-height:1.6}
+.store-item{padding:2px 4px;border-bottom:1px solid #16213e;display:flex;align-items:center}
+.store-item .seq{display:inline-block;width:22px;text-align:center;background:#e94560;color:#fff;border-radius:3px;margin-right:5px;font-size:10px;flex-shrink:0}
+.legend{display:flex;gap:12px;margin:8px 0;font-size:11px}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:12px;height:12px;border-radius:50%}
+.info-window{min-width:220px;font-size:13px;line-height:1.8}
+.info-window h4{font-size:14px;color:#333;margin-bottom:4px}
+.info-window .addr{font-size:11px;color:#666}
+.collect-btn{display:inline-block;padding:4px 14px;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold;border:none;margin-top:6px;transition:all .2s}
+.collected{background:#27ae60;color:#fff}
+.not-collected{background:#e74c3c;color:#fff}
+.route-select{margin:8px 0}
+.route-select select{width:100%;padding:8px;background:#0f3460;color:#eee;border:1px solid #e94560;border-radius:4px;font-size:13px;cursor:pointer;outline:none}
+.route-select option{background:#16213e;color:#eee}
+</style>
+</head>
+<body>
+<div id="container">
+<div id="map"></div>
+<div id="panel">
+  <h2>🚛 方案A：全局单环线（1车）</h2>
+  <div class="stat"><span>仓库</span><span>中盈潍坊仓</span></div>
+  <div class="stat"><span>门店总数</span><span>268</span></div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#27ae60"></div>已采集</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>未采集</div>
+  </div>
+  <div class="route-select"><select id="routeSelect" onchange="switchZone(this)">
+      <option value="all">全局环线 — 268 店 | 531.3km</option>
+    </select></div>
+
+  
+    <div class="stat"><span>环线门店</span><span>268</span></div>
+    <div class="stat"><span>直线距离</span><span>379.5 km</span></div>
+    <div class="stat"><span>估算实际</span><span>531.3 km</span></div>
+    <div class="stat"><span>车辆数</span><span>1 辆</span></div>
+
+  <div id="store-list-all" class="store-list">
+      <div class="store-item" data-zone="all"><span class="seq">1</span>昌邑市都昌街道北兴福村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">2</span>昌邑市都昌街道西永安村第三卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">3</span>昌邑市都昌街道东永安村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">4</span>昌邑市都昌街道东永安村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">5</span>昌邑市龙池镇东利渔村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">6</span>昌邑市龙池镇北白塔村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">7</span>昌邑市龙池镇东白塔村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">8</span>昌邑市佳新大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">9</span>昌邑市众康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">10</span>昌邑市鸿泰祥大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">11</span>昌邑市宏德大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">12</span>昌邑市龙池镇卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">13</span>昌邑市龙池镇龙北村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">14</span>昌邑市柳疃镇后官庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">15</span>昌邑市柳疃镇久丰屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">16</span>昌邑市柳疃镇中心卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">17</span>昌邑市柳疃镇柳疃村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">18</span>昌邑安之康药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">19</span>昌邑市柳疃镇姜家堤子村第一卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">20</span>昌邑市汇环海大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">21</span>昌邑市燕之堂大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">22</span>昌邑市柳疃镇姜家寨村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">23</span>昌邑市柳疃镇北玉皇庙村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">24</span>昌邑昌北药店有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">25</span>昌邑市昌盛大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">26</span>昌邑市柳疃镇前青村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">27</span>昌邑市柳疃镇郭家庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">28</span>昌邑市柳疃镇东申明亭村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">29</span>昌邑市柳疃镇北新兴村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">30</span>昌邑市柳疃镇西辛安庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">31</span>昌邑市义合堂大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">32</span>昌邑市下营镇郇家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">33</span>昌邑市下营镇卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">34</span>昌邑市下营镇东营村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">35</span>昌邑市下营镇东营村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">36</span>昌邑市康健大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">37</span>昌邑市下营镇吕家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">38</span>昌邑市下营镇二甲村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">39</span>昌邑市火道药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">40</span>昌邑市柳疃镇刘家车道村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">41</span>昌邑市下营镇冯家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">42</span>昌邑市慧民药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">43</span>昌邑市卜庄镇东冢街村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">44</span>昌邑民康药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">45</span>昌邑市卜庄镇姜泊村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">46</span>昌邑市卜庄镇西峰台村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">47</span>昌邑市卜庄镇夏店村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">48</span>昌邑市百姓康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">49</span>昌邑市德仁大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">50</span>昌邑市和信大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">51</span>昌邑市本草堂大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">52</span>昌邑市卜庄镇大河北村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">53</span>昌邑市卜庄镇抚安镇村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">54</span>昌邑市卜庄镇姜家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">55</span>昌邑市同真堂大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">56</span>昌邑市瑞康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">57</span>昌邑市春草堂大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">58</span>昌邑市圣医堂大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">59</span>昌邑市卜庄镇中心卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">60</span>昌邑市卜庄镇白衣庙村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">61</span>昌邑市围子街道韩家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">62</span>昌邑市围子街道李家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">63</span>昌邑市围子街道崔家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">64</span>昌邑市益寿堂大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">65</span>昌邑市围子街道东堤村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">66</span>昌邑市祝康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">67</span>昌邑维莱康大药房有限公司二店</div>
+      <div class="store-item" data-zone="all"><span class="seq">68</span>昌邑市饮马镇董家流河村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">69</span>昌邑维莱康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">70</span>昌邑市饮马镇西郭家庄子村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">71</span>昌邑市饮马镇杨家桥村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">72</span>昌邑市饮马镇前马兰屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">73</span>昌邑市石埠经济发展区裴家庄子村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">74</span>昌邑市饮马镇史家屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">75</span>昌邑市饮马镇旗杆元家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">76</span>昌邑市北孟镇高家庄子村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">77</span>昌邑市北孟镇后朱家庄子村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">78</span>昌邑市北孟镇西角兰村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">79</span>昌邑市北孟镇凰瑞埠村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">80</span>昌邑董云泽中医（综合）诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">81</span>昌邑市北孟镇塔耳堡村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">82</span>潍坊仁康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">83</span>昌邑市福百姓大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">84</span>昌邑市北孟镇卫生院塔耳堡社区卫生服务中心</div>
+      <div class="store-item" data-zone="all"><span class="seq">85</span>潍坊锦康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">86</span>昌邑市北孟镇郭家上疃村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">87</span>昌邑市北孟镇范家邱村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">88</span>昌邑市北孟镇麻姑庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">89</span>昌邑市北孟镇周家庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">90</span>昌邑市北孟镇韩家高阳村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">91</span>昌邑市北孟镇朱甫村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">92</span>昌邑市北孟镇金李埠村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">93</span>昌邑市北孟镇小南孟村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">94</span>昌邑市北孟镇李戈庄二村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">95</span>昌邑市北孟镇李戈庄一村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">96</span>昌邑市北孟镇朱家七沟村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">97</span>昌邑市北孟镇后周家七沟村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">98</span>昌邑市北孟镇西祝仙屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">99</span>昌邑市康利达大药房有限公司一店</div>
+      <div class="store-item" data-zone="all"><span class="seq">100</span>昌邑市康利达大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">101</span>昌邑市康惠药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">102</span>昌邑市北孟镇卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">103</span>昌邑市北孟镇东祝仙屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">104</span>昌邑市北孟镇前李家埠村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">105</span>昌邑市饮马镇中心卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">106</span>昌邑市饮马镇杨家庄子村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">107</span>昌邑顺康药店有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">108</span>昌邑市柳疃镇西玉大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">109</span>昌邑市饮马镇顾仙村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">110</span>昌邑市饮马镇东金台村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">111</span>昌邑启源综合门诊部（个体工商户）</div>
+      <div class="store-item" data-zone="all"><span class="seq">112</span>昌邑市泓康医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">113</span>昌邑市饮马镇东北村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">114</span>昌邑市饮马镇饮马西北村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">115</span>昌邑市饮马镇饮马西南村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">116</span>昌邑市饮马镇饮马西南村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">117</span>昌邑安芝华医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">118</span>昌邑王海梅诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">119</span>昌邑市饮马镇田家庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">120</span>昌邑市百家康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">121</span>昌邑市利众药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">122</span>昌邑市金康药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">123</span>昌邑市饮马镇杨家楼村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">124</span>昌邑市饮马镇丰乐屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">125</span>昌邑市饮马镇常家屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">126</span>昌邑市饮马镇大张家屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">127</span>昌邑市饮马镇前柳杭村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">128</span>昌邑市饮马镇西孙家薛庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">129</span>昌邑市饮马镇石埠西村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">130</span>昌邑市石埠康惠大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">131</span>昌邑张浩亮诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">132</span>昌邑市优康药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">133</span>昌邑市利众大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">134</span>昌邑市百分百大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">135</span>昌邑市饮马镇葛西村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">136</span>昌邑市饮马镇葛东村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">137</span>昌邑市饮马镇傅家庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">138</span>昌邑市康缘药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">139</span>昌邑市饮马镇饮马东北村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">140</span>昌邑市石埠经济发展区卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">141</span>昌邑市都昌街道北马埠村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">142</span>昌邑市都昌街道张固村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">143</span>昌邑市都昌街道史家洼子村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">144</span>昌邑市都昌街道南逄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">145</span>昌邑市都昌街道社区卫生服务中心</div>
+      <div class="store-item" data-zone="all"><span class="seq">146</span>昌邑市同康医药大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">147</span>昌邑市都昌街道东大营村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">148</span>昌邑市围子街道西小章村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">149</span>昌邑市围子街道西小章村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">150</span>昌邑市围子街道东张庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">151</span>昌邑市围子街道宋庄西村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">152</span>昌邑市围子街道宋庄东村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">153</span>昌邑市华之康大药房有限公司中心店</div>
+      <div class="store-item" data-zone="all"><span class="seq">154</span>昌邑市康普药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">155</span>昌邑市围子街道宋庄东村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">156</span>昌邑市围子街道辛赵村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">157</span>昌邑市围子街道刘家巷村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">158</span>昌邑市围子街道菅斜村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">159</span>昌邑市围子街道孙斜村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">160</span>昌邑市围子街道后斜村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">161</span>昌邑市围子街道军屯村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">162</span>昌邑市围子街道北金家口村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">163</span>昌邑市围子街道北金家口村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">164</span>昌邑市围子街道大姜村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">165</span>昌邑市围子街道西刘家巷村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">166</span>昌邑市围子街道韩家巷村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">167</span>昌邑市围子街道东丁庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">168</span>昌邑市围子街道马连岔村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">169</span>昌邑市围子街道六股路村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">170</span>昌邑市围子街道邢家村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">171</span>昌邑市围子街道邢家庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">172</span>潍坊市康济堂大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">173</span>昌邑市围子街道北密村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">174</span>昌邑市围子街道董家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">175</span>昌邑市华康药店有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">176</span>昌邑市精神卫生中心</div>
+      <div class="store-item" data-zone="all"><span class="seq">177</span>昌邑市德泰大药房</div>
+      <div class="store-item" data-zone="all"><span class="seq">178</span>昌邑市华卫医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">179</span>昌邑市围子街道仓街村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">180</span>昌邑市围子街道姚家郜村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">181</span>昌邑市围子街道明家郜村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">182</span>昌邑市围子街道徐家郜村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">183</span>昌邑市围子街道凤凰庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">184</span>昌邑市围子街道天成店村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">185</span>昌邑市围子街道义气镇村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">186</span>昌邑市恒泰大药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">187</span>昌邑祝永超中医（综合）诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">188</span>昌邑市围子街道卫生院</div>
+      <div class="store-item" data-zone="all"><span class="seq">189</span>昌邑市围子街道永富庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">190</span>昌邑市围子街道南宫村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">191</span>昌邑宇华健康管理有限公司利民街诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">192</span>昌邑刘修义诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">193</span>昌邑市奎聚街道中台村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">194</span>昌邑朱永山诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">195</span>昌邑市奎聚街道东店村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">196</span>昌邑恒德大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">197</span>昌邑市奎聚街道东店村第三卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">198</span>昌邑丁启尧诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">199</span>昌邑昌城医院利民街诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">200</span>昌邑康鑫综合门诊部</div>
+      <div class="store-item" data-zone="all"><span class="seq">201</span>昌邑市华之康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">202</span>昌邑市奎聚街道铁匠营社区居民委员会卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">203</span>昌邑昌城医院</div>
+      <div class="store-item" data-zone="all"><span class="seq">204</span>昌邑市奎聚街道社区卫生服务中心</div>
+      <div class="store-item" data-zone="all"><span class="seq">205</span>昌邑张岩中医（综合）诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">206</span>昌邑市奎聚街道郝家城后村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">207</span>昌邑市康泰大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">208</span>昌邑振华盐业有限公司卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">209</span>昌邑市颐康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">210</span>昌邑闫爱红诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">211</span>昌邑市都昌街道傅徐城后村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">212</span>昌邑邹业兴诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">213</span>昌邑市奎聚街道于范城后村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">214</span>昌邑市都昌街道傅徐城后村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">215</span>昌邑市都昌街道刘家辛戈社区居民委员会卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">216</span>昌邑信意健康管理有限公司卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">217</span>昌邑市联康大药房有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">218</span>昌邑市和平药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">219</span>昌邑市中医院</div>
+      <div class="store-item" data-zone="all"><span class="seq">220</span>昌邑圣怡综合门诊部</div>
+      <div class="store-item" data-zone="all"><span class="seq">221</span>昌邑黄琳诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">222</span>昌邑陈肖玲诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">223</span>昌邑市奎聚街道南隅社区居民委员会第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">224</span>昌邑市恒泰劳务有限公司平安街诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">225</span>昌邑李治辉中医（综合）诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">226</span>昌邑张言慎中医（综合）诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">227</span>昌邑乔莹莹诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">228</span>潍坊市联康药店</div>
+      <div class="store-item" data-zone="all"><span class="seq">229</span>昌邑市奎聚街道南庄头村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">230</span>昌邑市奎聚街道南庄头村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">231</span>昌邑市奎聚街道辛置三村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">232</span>昌邑魏晓茶诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">233</span>昌邑郭明星诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">234</span>昌邑市奎聚街道辛置三村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">235</span>昌邑市都昌街道南店村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">236</span>昌邑于佳诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">237</span>昌邑市益宁医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">238</span>昌邑市都昌街道山前村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">239</span>昌邑市都昌街道马家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">240</span>昌邑华康医院</div>
+      <div class="store-item" data-zone="all"><span class="seq">241</span>昌邑市都昌街道前埠村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">242</span>昌邑市都昌街道东安家埠社区居民委员会卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">243</span>昌邑康华医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">244</span>昌邑市心一堂医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">245</span>昌邑齐淑珍诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">246</span>昌邑市奎聚街道五里村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">247</span>昌邑刘磊诊所</div>
+      <div class="store-item" data-zone="all"><span class="seq">248</span>昌邑市奎聚街道王葛山下村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">249</span>昌邑市奎聚街道单家村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">250</span>昌邑市奎聚街道石湾店南村第二卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">251</span>昌邑市奎聚街道花园村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">252</span>昌邑市奎聚街道黄家辛庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">253</span>昌邑市奎聚街道高家岔河村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">254</span>昌邑市奎聚街道郭家岔河村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">255</span>昌邑市奎聚街道张家辛庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">256</span>昌邑市奎聚街道吴家辛庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">257</span>昌邑市柳疃镇太平集村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">258</span>昌邑市奎聚街道东逄翟村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">259</span>昌邑市奎聚街道西逄泽村生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">260</span>昌邑市奎聚街道徐家鄑水村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">261</span>昌邑市晟康医药有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">262</span>潍坊养天和仁和药店连锁有限公司</div>
+      <div class="store-item" data-zone="all"><span class="seq">263</span>昌邑市都昌街道南褚庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">264</span>昌邑市都昌街道中裴庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">265</span>昌邑市都昌街道双台社区卫生服务中心</div>
+      <div class="store-item" data-zone="all"><span class="seq">266</span>昌邑市都昌街道东侯富庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">267</span>昌邑市都昌街道中侯富庄村卫生室</div>
+      <div class="store-item" data-zone="all"><span class="seq">268</span>昌邑市都昌街道双台二村卫生室</div>
+    </div>
+
+</div>
+</div>
+<script>var AMAP_KEY="5b1b611b1de510fc6d513cb889ee219a";var WH_LNG=119.152544,WH_LAT=36.766329,WH_NAME="中盈潍坊仓";</script>
+<script src="https://webapi.amap.com/maps?v=2.0&key=5b1b611b1de510fc6d513cb889ee219a"></script>
+<script>
+
+var map = new AMap.Map('map',{
+    center:[WH_LNG,WH_LAT],zoom:11,resizeEnable:true
+});
+new AMap.Marker({position:[WH_LNG,WH_LAT],title:WH_NAME,icon:new AMap.Icon({size:new AMap.Size(36,36),
+    image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect x="4" y="4" width="28" height="28" rx="4" fill="#e94560" stroke="#fff" stroke-width="2"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">仓</text></svg>'),
+    imageSize:new AMap.Size(36,36)})}).setMap(map);
+
+function loadCollected(){try{var r=localStorage.getItem('changyi_collected_A');return r?JSON.parse(r):{};}catch(e){return{};}}
+function saveCollected(d){localStorage.setItem('changyi_collected_A',JSON.stringify(d));}
+var collectedMap=loadCollected();
+function getFillColor(name){return collectedMap[name]?'#27ae60':'#e74c3c';}
+function buildInfoWindow(store){
+    var c=collectedMap[store.name]||false;
+    var cls=c?'collected':'not-collected';
+    var txt=c?'已采集':'未采集';
+    var nm=store.name.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
+    return '<div class="info-window"><h4>'+store.name+'</h4><div class="addr">'+(store.address||'')+'</div><div>Seq:<b>'+store.seq+'</b> | 距仓:<b>'+store.dist_to_wh_km+'km</b></div><button class="collect-btn '+cls+'" data-store="'+nm+'">'+txt+'</button></div>';
+}
+document.addEventListener('click',function(e){
+    if(e.target.classList.contains('collect-btn')){
+        var name=e.target.getAttribute('data-store');
+        name=name.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
+        collectedMap[name]=!collectedMap[name];saveCollected(collectedMap);
+        e.target.className='collect-btn '+(collectedMap[name]?'collected':'not-collected');
+        e.target.textContent=collectedMap[name]?'已采集':'未采集';
+        refreshAllMarkers();
+    }
+});
+
+var allMarkers=[],allPolylines=[],zoneMarkers={},zonePolylines={};
+
+function refreshAllMarkers(){
+    allMarkers.forEach(function(m){
+        var n=m.getTitle(),c=getFillColor(n);
+        m.setIcon(new AMap.Icon({size:new AMap.Size(16,16),
+            image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="'+c+'" stroke="#fff" stroke-width="1.5"/></svg>'),
+            imageSize:new AMap.Size(16,16)}));
+    });
+}
+
+function drawStoreMarker(store,zoneId){
+    var m=new AMap.Marker({position:[store.lng,store.lat],title:store.name,map:map,
+        icon:new AMap.Icon({size:new AMap.Size(16,16),
+            image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="'+getFillColor(store.name)+'" stroke="#fff" stroke-width="1.5"/></svg>'),
+            imageSize:new AMap.Size(16,16)}),offset:new AMap.Pixel(-8,-8)});
+    m._zoneId=zoneId;
+    m.on('click',function(){var iw=new AMap.InfoWindow({content:buildInfoWindow(store),offset:new AMap.Pixel(0,-20)});iw.open(map,m.getPosition());});
+    allMarkers.push(m);
+    if(!zoneMarkers[zoneId])zoneMarkers[zoneId]=[];
+    zoneMarkers[zoneId].push(m);
+}
+
+function drawRing(ring,color,zoneId){
+    var path=[[WH_LNG,WH_LAT]];
+    ring.forEach(function(s){path.push([s.lng,s.lat]);});
+    path.push([WH_LNG,WH_LAT]);
+    var pl=new AMap.Polyline({path:path,strokeColor:color,strokeWeight:3,strokeOpacity:0.75,map:map});
+    pl._zoneId=zoneId;
+    allPolylines.push(pl);
+    if(!zonePolylines[zoneId])zonePolylines[zoneId]=[];
+    zonePolylines[zoneId].push(pl);
+    ring.forEach(function(s){drawStoreMarker(s,zoneId);});
+}
+
+function showZone(zoneId){
+    allPolylines.forEach(function(p){p.setMap(zoneId==='all'||String(p._zoneId)===zoneId?map:null);});
+    allMarkers.forEach(function(m){m.setMap(zoneId==='all'||String(m._zoneId)===zoneId?map:null);});
+    filterStoreList(zoneId);
+}
+
+function switchZone(sel){
+    showZone(sel.value);
+}
+
+function filterStoreList(zoneId){
+    document.querySelectorAll('.store-item').forEach(function(el){
+        el.style.display = (zoneId==='all' || el.getAttribute('data-zone')===zoneId) ? 'flex' : 'none';
+    });
+}
+
+var PLAN_DATA={"type": "A", "description": "单环线，1车，<15家订单", "vehicles": 1, "ring": [{"seq": 1, "id": "昌邑市都昌街道北兴福村第二卫生室", "name": "昌邑市都昌街道北兴福村第二卫生室", "address": "昌邑市都昌街道北兴福村中部", "lng": 119.242957, "lat": 36.844559, "dist_to_wh_km": 11.85, "dist_to_next_km": 4.3}, {"seq": 2, "id": "昌邑市都昌街道西永安村第三卫生室", "name": "昌邑市都昌街道西永安村第三卫生室", "address": "昌邑市都昌街道西永安村250号", "lng": 119.259916, "lat": 36.880753, "dist_to_wh_km": 15.91, "dist_to_next_km": 1.12}, {"seq": 3, "id": "昌邑市都昌街道东永安村第二卫生室", "name": "昌邑市都昌街道东永安村第二卫生室", "address": "昌邑市都昌街道东永安村801号", "lng": 119.272467, "lat": 36.880351, "dist_to_wh_km": 16.57, "dist_to_next_km": 0.24}, {"seq": 4, "id": "昌邑市都昌街道东永安村卫生室", "name": "昌邑市都昌街道东永安村卫生室", "address": "昌邑市都昌街道东永安村", "lng": 119.27226, "lat": 36.882466, "dist_to_wh_km": 16.74, "dist_to_next_km": 14.6}, {"seq": 5, "id": "昌邑市龙池镇东利渔村卫生室", "name": "昌邑市龙池镇东利渔村卫生室", "address": "昌邑市龙池镇东利渔村", "lng": 119.268101, "lat": 37.013728, "dist_to_wh_km": 29.37, "dist_to_next_km": 7.77}, {"seq": 6, "id": "昌邑市龙池镇北白塔村卫生室", "name": "昌邑市龙池镇北白塔村卫生室", "address": "昌邑市龙池镇北白塔村", "lng": 119.308221, "lat": 36.951653, "dist_to_wh_km": 24.83, "dist_to_next_km": 0.91}, {"seq": 7, "id": "昌邑市龙池镇东白塔村卫生室", "name": "昌邑市龙池镇东白塔村卫生室", "address": "昌邑市龙池镇东白塔村", "lng": 119.315487, "lat": 36.945929, "dist_to_wh_km": 24.68, "dist_to_next_km": 0.77}, {"seq": 8, "id": "昌邑市佳新大药房", "name": "昌邑市佳新大药房", "address": "潍坊市昌邑市龙池镇柳瓦路南", "lng": 119.323975, "lat": 36.944605, "dist_to_wh_km": 25.01, "dist_to_next_km": 0.09}, {"seq": 9, "id": "昌邑市众康大药房有限公司", "name": "昌邑市众康大药房有限公司", "address": "山东省潍坊市昌邑市龙池镇政府街100号1幢无单元108", "lng": 119.324962, "lat": 36.94479, "dist_to_wh_km": 25.08, "dist_to_next_km": 0.01}, {"seq": 10, "id": "昌邑市鸿泰祥大药房", "name": "昌邑市鸿泰祥大药房", "address": "昌邑市龙池镇政府街100号1幢无单元105", "lng": 119.325112, "lat": 36.944801, "dist_to_wh_km": 25.09, "dist_to_next_km": 0.26}, {"seq": 11, "id": "昌邑市宏德大药房", "name": "昌邑市宏德大药房", "address": "山东省潍坊市昌邑市龙池镇龙池街与北海路交叉路口北200米路东", "lng": 119.322485, "lat": 36.945796, "dist_to_wh_km": 25.04, "dist_to_next_km": 0.36}, {"seq": 12, "id": "昌邑市龙池镇卫生院", "name": "昌邑市龙池镇卫生院", "address": "昌邑市龙池镇政府驻地", "lng": 119.322521, "lat": 36.949004, "dist_to_wh_km": 25.32, "dist_to_next_km": 0.81}, {"seq": 13, "id": "昌邑市龙池镇龙北村卫生室", "name": "昌邑市龙池镇龙北村卫生室", "address": "昌邑市龙池镇龙北村", "lng": 119.326124, "lat": 36.955691, "dist_to_wh_km": 26.11, "dist_to_next_km": 4.59}, {"seq": 14, "id": "昌邑市柳疃镇后官庄村卫生室", "name": "昌邑市柳疃镇后官庄村卫生室", "address": "昌邑市柳疃镇后官庄村", "lng": 119.376656, "lat": 36.964341, "dist_to_wh_km": 29.7, "dist_to_next_km": 2.03}, {"seq": 15, "id": "昌邑市柳疃镇久丰屯村卫生室", "name": "昌邑市柳疃镇久丰屯村卫生室", "address": "昌邑市柳疃镇久丰屯村230号", "lng": 119.397947, "lat": 36.957793, "dist_to_wh_km": 30.49, "dist_to_next_km": 1.87}, {"seq": 16, "id": "昌邑市柳疃镇中心卫生院", "name": "昌邑市柳疃镇中心卫生院", "address": "昌邑市柳疃镇柳瓦路2号", "lng": 119.392991, "lat": 36.94148, "dist_to_wh_km": 28.93, "dist_to_next_km": 0.69}, {"seq": 17, "id": "昌邑市柳疃镇柳疃村第二卫生室", "name": "昌邑市柳疃镇柳疃村第二卫生室", "address": "昌邑市柳疃镇柳疃村", "lng": 119.392485, "lat": 36.935286, "dist_to_wh_km": 28.44, "dist_to_next_km": 0.33}, {"seq": 18, "id": "昌邑安之康药店", "name": "昌邑安之康药店", "address": "山东省潍坊市昌邑市柳疃镇北海路西侧汇丰石化北邻南数第五间", "lng": 119.395747, "lat": 36.933893, "dist_to_wh_km": 28.56, "dist_to_next_km": 1.37}, {"seq": 19, "id": "昌邑市柳疃镇姜家堤子村第一卫生室", "name": "昌邑市柳疃镇姜家堤子村第一卫生室", "address": "昌邑市柳疃镇姜家堤子村29号", "lng": 119.407201, "lat": 36.925691, "dist_to_wh_km": 28.77, "dist_to_next_km": 1.51}, {"seq": 20, "id": "昌邑市汇环海大药房", "name": "昌邑市汇环海大药房", "address": "昌邑市柳疃镇政府驻地（昌灶路32号）", "lng": 119.396189, "lat": 36.936056, "dist_to_wh_km": 28.74, "dist_to_next_km": 0.48}, {"seq": 21, "id": "昌邑市燕之堂大药房有限公司", "name": "昌邑市燕之堂大药房有限公司", "address": "山东省潍坊市昌邑市柳疃镇昌灶路西侧沿街楼2间一层（大运发超市北邻）", "lng": 119.395558, "lat": 36.940383, "dist_to_wh_km": 29.02, "dist_to_next_km": 2.04}, {"seq": 22, "id": "昌邑市柳疃镇姜家寨村卫生室", "name": "昌邑市柳疃镇姜家寨村卫生室", "address": "昌邑市柳疃镇姜家寨村", "lng": 119.412574, "lat": 36.952736, "dist_to_wh_km": 31.06, "dist_to_next_km": 3.01}, {"seq": 23, "id": "昌邑市柳疃镇北玉皇庙村卫生室", "name": "昌邑市柳疃镇北玉皇庙村卫生室", "address": "昌邑市柳疃镇北玉皇庙村96号", "lng": 119.40471, "lat": 36.979055, "dist_to_wh_km": 32.6, "dist_to_next_km": 2.36}, {"seq": 24, "id": "昌邑昌北药店有限公司", "name": "昌邑昌北药店有限公司", "address": "山东省潍坊市昌邑市柳疃镇昌灶路与青乡街交叉口东80米路北东数第18-19间", "lng": 119.394322, "lat": 36.998557, "dist_to_wh_km": 33.6, "dist_to_next_km": 0.3}, {"seq": 25, "id": "昌邑市昌盛大药房", "name": "昌邑市昌盛大药房", "address": "山东省潍坊市昌邑市柳疃镇青乡街1号3幢商铺10", "lng": 119.393806, "lat": 37.001202, "dist_to_wh_km": 33.8, "dist_to_next_km": 0.23}, {"seq": 26, "id": "昌邑市柳疃镇前青村卫生室", "name": "昌邑市柳疃镇前青村卫生室", "address": "昌邑市柳疃镇前青村", "lng": 119.39619, "lat": 37.00039, "dist_to_wh_km": 33.87, "dist_to_next_km": 4.14}, {"seq": 27, "id": "昌邑市柳疃镇郭家庄村卫生室", "name": "昌邑市柳疃镇郭家庄村卫生室", "address": "昌邑市柳曈镇郭家庄村1号", "lng": 119.442667, "lat": 37.002903, "dist_to_wh_km": 36.85, "dist_to_next_km": 0.77}, {"seq": 28, "id": "昌邑市柳疃镇东申明亭村卫生室", "name": "昌邑市柳疃镇东申明亭村卫生室", "address": "昌邑市柳疃镇东申明亭村", "lng": 119.450897, "lat": 37.000749, "dist_to_wh_km": 37.2, "dist_to_next_km": 0.67}, {"seq": 29, "id": "昌邑市柳疃镇北新兴村卫生室", "name": "昌邑市柳疃镇北新兴村卫生室", "address": "昌邑市柳疃镇北新兴村", "lng": 119.446581, "lat": 37.005698, "dist_to_wh_km": 37.31, "dist_to_next_km": 1.55}, {"seq": 30, "id": "昌邑市柳疃镇西辛安庄村卫生室", "name": "昌邑市柳疃镇西辛安庄村卫生室", "address": "昌邑市柳疃镇西辛安庄村", "lng": 119.453478, "lat": 37.01855, "dist_to_wh_km": 38.77, "dist_to_next_km": 0.14}, {"seq": 31, "id": "昌邑市义合堂大药房", "name": "昌邑市义合堂大药房", "address": "山东省潍坊市昌邑市柳疃镇西辛安庄村中心十字路口东北", "lng": 119.455087, "lat": 37.018425, "dist_to_wh_km": 38.85, "dist_to_next_km": 4.83}, {"seq": 32, "id": "昌邑市下营镇郇家村卫生室", "name": "昌邑市下营镇郇家村卫生室", "address": "潍坊市昌邑市下营镇郇家村月亮岛御庭19号", "lng": 119.476754, "lat": 37.058279, "dist_to_wh_km": 43.41, "dist_to_next_km": 1.11}, {"seq": 33, "id": "昌邑市下营镇卫生院", "name": "昌邑市下营镇卫生院", "address": "昌邑市下营镇港口路5号、昌邑滨海（下营）经济开发区华昌未来城沿街门头房11号-13号", "lng": 119.48632, "lat": 37.051851, "dist_to_wh_km": 43.46, "dist_to_next_km": 1.21}, {"seq": 34, "id": "昌邑市下营镇东营村第二卫生室", "name": "昌邑市下营镇东营村第二卫生室", "address": "昌邑市下营镇东营村", "lng": 119.479215, "lat": 37.042552, "dist_to_wh_km": 42.27, "dist_to_next_km": 0.0}, {"seq": 35, "id": "昌邑市下营镇东营村卫生室", "name": "昌邑市下营镇东营村卫生室", "address": "昌邑市下营镇东营村", "lng": 119.479221, "lat": 37.042551, "dist_to_wh_km": 42.27, "dist_to_next_km": 0.2}, {"seq": 36, "id": "昌邑市康健大药房", "name": "昌邑市康健大药房", "address": "山东省潍坊市昌邑市下营镇东营村185-1号", "lng": 119.481433, "lat": 37.042671, "dist_to_wh_km": 42.42, "dist_to_next_km": 1.23}, {"seq": 37, "id": "昌邑市下营镇吕家村卫生室", "name": "昌邑市下营镇吕家村卫生室", "address": "昌邑市下营镇吕家村", "lng": 119.492649, "lat": 37.036234, "dist_to_wh_km": 42.61, "dist_to_next_km": 4.93}, {"seq": 38, "id": "昌邑市下营镇二甲村卫生室", "name": "昌邑市下营镇二甲村卫生室", "address": "昌邑市下营镇二甲村", "lng": 119.479912, "lat": 36.993068, "dist_to_wh_km": 38.52, "dist_to_next_km": 1.02}, {"seq": 39, "id": "昌邑市火道药店", "name": "昌邑市火道药店", "address": "昌邑市下营镇火道村（火道农村信用社北100米路北）", "lng": 119.475448, "lat": 36.984628, "dist_to_wh_km": 37.61, "dist_to_next_km": 4.16}, {"seq": 40, "id": "昌邑市柳疃镇刘家车道村卫生室", "name": "昌邑市柳疃镇刘家车道村卫生室", "address": "昌邑市柳疃镇刘家车道村", "lng": 119.428839, "lat": 36.98088, "dist_to_wh_km": 34.25, "dist_to_next_km": 2.15}, {"seq": 41, "id": "昌邑市下营镇冯家村卫生室", "name": "昌邑市下营镇冯家村卫生室", "address": "昌邑市下营镇冯家村", "lng": 119.44798, "lat": 36.969028, "dist_to_wh_km": 34.62, "dist_to_next_km": 3.01}, {"seq": 42, "id": "昌邑市慧民药店", "name": "昌邑市慧民药店", "address": "山东省潍坊市昌邑市卜庄镇东冢街北侧东冢超市西邻", "lng": 119.468435, "lat": 36.947427, "dist_to_wh_km": 34.57, "dist_to_next_km": 0.02}, {"seq": 43, "id": "昌邑市卜庄镇东冢街村卫生室", "name": "昌邑市卜庄镇东冢街村卫生室", "address": "昌邑市卜庄镇东冢街村", "lng": 119.468206, "lat": 36.947429, "dist_to_wh_km": 34.56, "dist_to_next_km": 0.08}, {"seq": 44, "id": "昌邑民康药店", "name": "昌邑民康药店", "address": "昌邑市卜庄镇东冢街供销社沿街楼", "lng": 119.467365, "lat": 36.947569, "dist_to_wh_km": 34.51, "dist_to_next_km": 2.41}, {"seq": 45, "id": "昌邑市卜庄镇姜泊村卫生室", "name": "昌邑市卜庄镇姜泊村卫生室", "address": "昌邑市卜庄镇姜泊村", "lng": 119.440341, "lat": 36.946031, "dist_to_wh_km": 32.48, "dist_to_next_km": 4.19}, {"seq": 46, "id": "昌邑市卜庄镇西峰台村卫生室", "name": "昌邑市卜庄镇西峰台村卫生室", "address": "昌邑市卜庄镇西峰台村8号", "lng": 119.449904, "lat": 36.909116, "dist_to_wh_km": 30.86, "dist_to_next_km": 1.75}, {"seq": 47, "id": "昌邑市卜庄镇夏店村卫生室", "name": "昌邑市卜庄镇夏店村卫生室", "address": "昌邑市卜庄镇夏店村225号", "lng": 119.468797, "lat": 36.904721, "dist_to_wh_km": 32.08, "dist_to_next_km": 0.06}, {"seq": 48, "id": "昌邑市百姓康大药房有限公司", "name": "昌邑市百姓康大药房有限公司", "address": "昌邑市卜庄镇夏店村村东（村委东18米）", "lng": 119.468347, "lat": 36.904283, "dist_to_wh_km": 32.02, "dist_to_next_km": 0.02}, {"seq": 49, "id": "昌邑市德仁大药房有限公司", "name": "昌邑市德仁大药房有限公司", "address": "山东省潍坊市昌邑市卜庄镇夏店街村下小路与民生街十字路口南30米", "lng": 119.468246, "lat": 36.904089, "dist_to_wh_km": 32.0, "dist_to_next_km": 0.2}, {"seq": 50, "id": "昌邑市和信大药房有限公司", "name": "昌邑市和信大药房有限公司", "address": "山东省潍坊市昌邑市卜庄镇夏店社区下小路以西夏店街以南20米", "lng": 119.467831, "lat": 36.902357, "dist_to_wh_km": 31.88, "dist_to_next_km": 0.15}, {"seq": 51, "id": "昌邑市本草堂大药房", "name": "昌邑市本草堂大药房", "address": "山东省潍坊市昌邑市卜庄镇夏店社区下小路东煜兴超市北", "lng": 119.468292, "lat": 36.901043, "dist_to_wh_km": 31.84, "dist_to_next_km": 2.9}, {"seq": 52, "id": "昌邑市卜庄镇大河北村卫生室", "name": "昌邑市卜庄镇大河北村卫生室", "address": "昌邑市卜庄镇大河北村", "lng": 119.500919, "lat": 36.902132, "dist_to_wh_km": 34.49, "dist_to_next_km": 0.96}, {"seq": 53, "id": "昌邑市卜庄镇抚安镇村卫生室", "name": "昌邑市卜庄镇抚安镇村卫生室", "address": "昌邑市卜庄镇抚安镇村140号", "lng": 119.503358, "lat": 36.910534, "dist_to_wh_km": 35.1, "dist_to_next_km": 4.18}, {"seq": 54, "id": "昌邑市卜庄镇姜家村卫生室", "name": "昌邑市卜庄镇姜家村卫生室", "address": "潍坊市昌邑市卜庄镇姜家村委办公室西25米", "lng": 119.550375, "lat": 36.910625, "dist_to_wh_km": 38.87, "dist_to_next_km": 0.64}, {"seq": 55, "id": "昌邑市同真堂大药房有限公司", "name": "昌邑市同真堂大药房有限公司", "address": "山东省潍坊市昌邑市卜庄镇206国道农业银行北邻沿街商铺自北向南第三户", "lng": 119.557466, "lat": 36.91152, "dist_to_wh_km": 39.49, "dist_to_next_km": 0.05}, {"seq": 56, "id": "昌邑市瑞康大药房有限公司", "name": "昌邑市瑞康大药房有限公司", "address": "山东省潍坊市昌邑市卜庄镇商业街农业银行东邻", "lng": 119.557816, "lat": 36.911161, "dist_to_wh_km": 39.5, "dist_to_next_km": 0.05}, {"seq": 57, "id": "昌邑市春草堂大药房", "name": "昌邑市春草堂大药房", "address": "山东省潍坊市昌邑市卜庄镇青年路5号17栋11号", "lng": 119.558353, "lat": 36.91118, "dist_to_wh_km": 39.54, "dist_to_next_km": 0.11}, {"seq": 58, "id": "昌邑市圣医堂大药房", "name": "昌邑市圣医堂大药房", "address": "山东省潍坊市昌邑市卜庄镇商业街中段路北，香港街以西", "lng": 119.559611, "lat": 36.911211, "dist_to_wh_km": 39.65, "dist_to_next_km": 0.15}, {"seq": 59, "id": "昌邑市卜庄镇中心卫生院", "name": "昌邑市卜庄镇中心卫生院", "address": "昌邑市卜庄镇卜庄街，昌邑市夕源鸿慈养老服务有限公司卜庄分公司二楼", "lng": 119.558946, "lat": 36.909994, "dist_to_wh_km": 39.54, "dist_to_next_km": 1.53}, {"seq": 60, "id": "昌邑市卜庄镇白衣庙村卫生室", "name": "昌邑市卜庄镇白衣庙村卫生室", "address": "昌邑市卜庄镇白衣庙村177号", "lng": 119.575757, "lat": 36.907042, "dist_to_wh_km": 40.78, "dist_to_next_km": 7.2}, {"seq": 61, "id": "昌邑市围子街道韩家村卫生室", "name": "昌邑市围子街道韩家村卫生室", "address": "昌邑市围子街道韩家村", "lng": 119.567747, "lat": 36.842628, "dist_to_wh_km": 37.93, "dist_to_next_km": 0.52}, {"seq": 62, "id": "昌邑市围子街道李家村卫生室", "name": "昌邑市围子街道李家村卫生室", "address": "昌邑市围子街道李家村", "lng": 119.563792, "lat": 36.83919, "dist_to_wh_km": 37.5, "dist_to_next_km": 1.21}, {"seq": 63, "id": "昌邑市围子街道崔家村卫生室", "name": "昌邑市围子街道崔家村卫生室", "address": "昌邑市围子街道崔家村", "lng": 119.560831, "lat": 36.828557, "dist_to_wh_km": 37.01, "dist_to_next_km": 0.54}, {"seq": 64, "id": "昌邑市益寿堂大药房有限公司", "name": "昌邑市益寿堂大药房有限公司", "address": "山东省潍坊市昌邑市围子街道仓街社区密埠店二村132号", "lng": 119.559542, "lat": 36.823827, "dist_to_wh_km": 36.8, "dist_to_next_km": 1.43}, {"seq": 65, "id": "昌邑市围子街道东堤村第二卫生室", "name": "昌邑市围子街道东堤村第二卫生室", "address": "昌邑市围子街道东堤村", "lng": 119.567084, "lat": 36.812429, "dist_to_wh_km": 37.27, "dist_to_next_km": 9.76}, {"seq": 66, "id": "昌邑市祝康大药房有限公司", "name": "昌邑市祝康大药房有限公司", "address": "山东省潍坊市昌邑市石埠经济发展区流河一村292号", "lng": 119.539545, "lat": 36.7275, "dist_to_wh_km": 34.75, "dist_to_next_km": 0.06}, {"seq": 67, "id": "昌邑维莱康大药房有限公司二店", "name": "昌邑维莱康大药房有限公司二店", "address": "山东省潍坊市昌邑市石埠经济发展区流河一村622号", "lng": 119.539256, "lat": 36.72801, "dist_to_wh_km": 34.72, "dist_to_next_km": 1.01}, {"seq": 68, "id": "昌邑市饮马镇董家流河村卫生室", "name": "昌邑市饮马镇董家流河村卫生室", "address": "昌邑市饮马镇董家流河村", "lng": 119.533483, "lat": 36.735872, "dist_to_wh_km": 34.11, "dist_to_next_km": 0.86}, {"seq": 69, "id": "昌邑维莱康大药房有限公司", "name": "昌邑维莱康大药房有限公司", "address": "山东省潍坊市昌邑市石埠经济发展区沟流村309国道红绿灯北200米路东（格力专卖店北邻）", "lng": 119.526963, "lat": 36.741514, "dist_to_wh_km": 33.47, "dist_to_next_km": 1.98}, {"seq": 70, "id": "昌邑市饮马镇西郭家庄子村卫生室", "name": "昌邑市饮马镇西郭家庄子村卫生室", "address": "昌邑市饮马镇西郭家庄子村土豆大姜交易市场沿街房001号楼", "lng": 119.50497, "lat": 36.739019, "dist_to_wh_km": 31.54, "dist_to_next_km": 3.36}, {"seq": 71, "id": "昌邑市饮马镇杨家桥村卫生室", "name": "昌邑市饮马镇杨家桥村卫生室", "address": "昌邑市饮马镇杨家桥村", "lng": 119.500102, "lat": 36.709022, "dist_to_wh_km": 31.62, "dist_to_next_km": 1.19}, {"seq": 72, "id": "昌邑市饮马镇前马兰屯村卫生室", "name": "昌邑市饮马镇前马兰屯村卫生室", "address": "昌邑市饮马镇前马兰屯村194号", "lng": 119.513244, "lat": 36.711081, "dist_to_wh_km": 32.72, "dist_to_next_km": 2.3}, {"seq": 73, "id": "昌邑市石埠经济发展区裴家庄子村卫生室", "name": "昌邑市石埠经济发展区裴家庄子村卫生室", "address": "昌邑市石埠经济发展区裴家庄子村269号", "lng": 119.533182, "lat": 36.69793, "dist_to_wh_km": 34.76, "dist_to_next_km": 1.95}, {"seq": 74, "id": "昌邑市饮马镇史家屯村卫生室", "name": "昌邑市饮马镇史家屯村卫生室", "address": "昌邑市石饮马镇史家屯村46号", "lng": 119.554283, "lat": 36.693398, "dist_to_wh_km": 36.71, "dist_to_next_km": 0.8}, {"seq": 75, "id": "昌邑市饮马镇旗杆元家村卫生室", "name": "昌邑市饮马镇旗杆元家村卫生室", "address": "昌邑市饮马镇旗杆元家村265号", "lng": 119.562192, "lat": 36.696777, "dist_to_wh_km": 37.32, "dist_to_next_km": 7.68}, {"seq": 76, "id": "昌邑市北孟镇高家庄子村卫生室", "name": "昌邑市北孟镇高家庄子村卫生室", "address": "昌邑市北孟镇高家庄子村", "lng": 119.544308, "lat": 36.62922, "dist_to_wh_km": 38.11, "dist_to_next_km": 1.57}, {"seq": 77, "id": "昌邑市北孟镇后朱家庄子村卫生室", "name": "昌邑市北孟镇后朱家庄子村卫生室", "address": "昌邑市北孟镇后朱村", "lng": 119.556078, "lat": 36.618712, "dist_to_wh_km": 39.55, "dist_to_next_km": 5.87}, {"seq": 78, "id": "昌邑市北孟镇西角兰村卫生室", "name": "昌邑市北孟镇西角兰村卫生室", "address": "昌邑市北孟镇西角兰村", "lng": 119.580667, "lat": 36.569707, "dist_to_wh_km": 44.0, "dist_to_next_km": 4.39}, {"seq": 79, "id": "昌邑市北孟镇凰瑞埠村第二卫生室", "name": "昌邑市北孟镇凰瑞埠村第二卫生室", "address": "昌邑市北孟镇凰瑞埠村", "lng": 119.595428, "lat": 36.53209, "dist_to_wh_km": 47.32, "dist_to_next_km": 2.28}, {"seq": 80, "id": "昌邑董云泽中医（综合）诊所", "name": "昌邑董云泽中医（综合）诊所", "address": "山东省昌邑市北孟镇塔尔堡村73号", "lng": 119.584686, "lat": 36.513462, "dist_to_wh_km": 47.72, "dist_to_next_km": 0.2}, {"seq": 81, "id": "昌邑市北孟镇塔耳堡村卫生室", "name": "昌邑市北孟镇塔耳堡村卫生室", "address": "昌邑市北孟镇塔耳堡村", "lng": 119.584196, "lat": 36.51173, "dist_to_wh_km": 47.8, "dist_to_next_km": 0.23}, {"seq": 82, "id": "潍坊仁康大药房有限公司", "name": "潍坊仁康大药房有限公司", "address": "山东省潍坊市昌邑市北孟镇塔尔堡社区镇府街与高坊路交叉口西60米路北东数第14-16间", "lng": 119.586808, "lat": 36.511891, "dist_to_wh_km": 47.98, "dist_to_next_km": 0.12}, {"seq": 83, "id": "昌邑市福百姓大药房有限公司", "name": "昌邑市福百姓大药房有限公司", "address": "昌邑市北孟镇高塔路10号等", "lng": 119.587763, "lat": 36.512663, "dist_to_wh_km": 47.99, "dist_to_next_km": 0.26}, {"seq": 84, "id": "昌邑市北孟镇卫生院塔耳堡社区卫生服务中心", "name": "昌邑市北孟镇卫生院塔耳堡社区卫生服务中心", "address": "昌邑市北孟镇塔耳堡村", "lng": 119.587428, "lat": 36.510381, "dist_to_wh_km": 48.12, "dist_to_next_km": 0.04}, {"seq": 85, "id": "潍坊锦康大药房有限公司", "name": "潍坊锦康大药房有限公司", "address": "山东省潍坊市昌邑市北孟镇塔尔堡街道塔尔堡村隆泰丰超市东门南1号", "lng": 119.587275, "lat": 36.510075, "dist_to_wh_km": 48.13, "dist_to_next_km": 1.35}, {"seq": 86, "id": "昌邑市北孟镇郭家上疃村卫生室", "name": "昌邑市北孟镇郭家上疃村卫生室", "address": "昌邑市北孟镇郭家上疃村", "lng": 119.59999, "lat": 36.503582, "dist_to_wh_km": 49.47, "dist_to_next_km": 3.08}, {"seq": 87, "id": "昌邑市北孟镇范家邱村卫生室", "name": "昌邑市北孟镇范家邱村卫生室", "address": "昌邑市北孟镇范家邱村", "lng": 119.612104, "lat": 36.477658, "dist_to_wh_km": 52.08, "dist_to_next_km": 1.13}, {"seq": 88, "id": "昌邑市北孟镇麻姑庄村卫生室", "name": "昌邑市北孟镇麻姑庄村卫生室", "address": "昌邑市北孟镇麻姑庄村", "lng": 119.605204, "lat": 36.469197, "dist_to_wh_km": 52.19, "dist_to_next_km": 2.61}, {"seq": 89, "id": "昌邑市北孟镇周家庄村卫生室", "name": "昌邑市北孟镇周家庄村卫生室", "address": "昌邑市北孟镇周家庄村", "lng": 119.579582, "lat": 36.457935, "dist_to_wh_km": 51.27, "dist_to_next_km": 0.84}, {"seq": 90, "id": "昌邑市北孟镇韩家高阳村卫生室", "name": "昌邑市北孟镇韩家高阳村卫生室", "address": "昌邑市北孟镇韩家高阳村", "lng": 119.570923, "lat": 36.460775, "dist_to_wh_km": 50.49, "dist_to_next_km": 3.35}, {"seq": 91, "id": "昌邑市北孟镇朱甫村卫生室", "name": "昌邑市北孟镇朱甫村卫生室", "address": "昌邑市北孟镇朱甫村", "lng": 119.576996, "lat": 36.490515, "dist_to_wh_km": 48.74, "dist_to_next_km": 2.98}, {"seq": 92, "id": "昌邑市北孟镇金李埠村卫生室", "name": "昌邑市北孟镇金李埠村卫生室", "address": "昌邑市北孟镇金李埠村136号", "lng": 119.561868, "lat": 36.51443, "dist_to_wh_km": 46.03, "dist_to_next_km": 6.57}, {"seq": 93, "id": "昌邑市北孟镇小南孟村第二卫生室", "name": "昌邑市北孟镇小南孟村第二卫生室", "address": "昌邑市北孟镇小南孟村", "lng": 119.519424, "lat": 36.562689, "dist_to_wh_km": 39.79, "dist_to_next_km": 2.99}, {"seq": 94, "id": "昌邑市北孟镇李戈庄二村卫生室", "name": "昌邑市北孟镇李戈庄二村卫生室", "address": "昌邑市北孟镇李戈庄二村", "lng": 119.547262, "lat": 36.577561, "dist_to_wh_km": 40.99, "dist_to_next_km": 0.35}, {"seq": 95, "id": "昌邑市北孟镇李戈庄一村第二卫生室", "name": "昌邑市北孟镇李戈庄一村第二卫生室", "address": "昌邑市北孟镇李戈庄一村", "lng": 119.545026, "lat": 36.580188, "dist_to_wh_km": 40.66, "dist_to_next_km": 2.6}, {"seq": 96, "id": "昌邑市北孟镇朱家七沟村卫生室", "name": "昌邑市北孟镇朱家七沟村卫生室", "address": "昌邑市北孟镇朱七村", "lng": 119.516731, "lat": 36.585802, "dist_to_wh_km": 38.18, "dist_to_next_km": 0.91}, {"seq": 97, "id": "昌邑市北孟镇后周家七沟村卫生室", "name": "昌邑市北孟镇后周家七沟村卫生室", "address": "昌邑市北孟镇后周家七沟村", "lng": 119.50685, "lat": 36.583903, "dist_to_wh_km": 37.55, "dist_to_next_km": 1.98}, {"seq": 98, "id": "昌邑市北孟镇西祝仙屯村卫生室", "name": "昌邑市北孟镇西祝仙屯村卫生室", "address": "昌邑市北孟镇西祝仙屯村", "lng": 119.507471, "lat": 36.601732, "dist_to_wh_km": 36.56, "dist_to_next_km": 0.23}, {"seq": 99, "id": "昌邑市康利达大药房有限公司一店", "name": "昌邑市康利达大药房有限公司一店", "address": "山东省潍坊市昌邑市北孟镇驻地", "lng": 119.506395, "lat": 36.603617, "dist_to_wh_km": 36.37, "dist_to_next_km": 0.0}, {"seq": 100, "id": "昌邑市康利达大药房有限公司", "name": "昌邑市康利达大药房有限公司", "address": "山东省潍坊市昌邑市北孟镇新昌街与文府路交叉路口向西20米路南", "lng": 119.506393, "lat": 36.603617, "dist_to_wh_km": 36.37, "dist_to_next_km": 0.37}, {"seq": 101, "id": "昌邑市康惠药店", "name": "昌邑市康惠药店", "address": "山东省潍坊市昌邑市北孟中心广场沿街楼1号楼", "lng": 119.502218, "lat": 36.603348, "dist_to_wh_km": 36.06, "dist_to_next_km": 0.4}, {"seq": 102, "id": "昌邑市北孟镇卫生院", "name": "昌邑市北孟镇卫生院", "address": "昌邑市北孟镇府驻地", "lng": 119.500134, "lat": 36.600184, "dist_to_wh_km": 36.08, "dist_to_next_km": 1.65}, {"seq": 103, "id": "昌邑市北孟镇东祝仙屯村卫生室", "name": "昌邑市北孟镇东祝仙屯村卫生室", "address": "潍坊市昌邑市北孟镇东祝仙屯村民悦家园", "lng": 119.481765, "lat": 36.601928, "dist_to_wh_km": 34.58, "dist_to_next_km": 0.77}, {"seq": 104, "id": "昌邑市北孟镇前李家埠村卫生室", "name": "昌邑市北孟镇前李家埠村卫生室", "address": "昌邑市北孟镇前李家埠村", "lng": 119.477238, "lat": 36.607811, "dist_to_wh_km": 33.9, "dist_to_next_km": 3.61}, {"seq": 105, "id": "昌邑市饮马镇中心卫生院", "name": "昌邑市饮马镇中心卫生院", "address": "昌邑市饮马镇政府驻地、昌邑市饮马镇西南村祥乐老年公寓4号楼（内科门诊）", "lng": 119.473131, "lat": 36.640128, "dist_to_wh_km": 31.84, "dist_to_next_km": 1.07}, {"seq": 106, "id": "昌邑市饮马镇杨家庄子村卫生室", "name": "昌邑市饮马镇杨家庄子村卫生室", "address": "昌邑市饮马镇杨家庄子村", "lng": 119.461211, "lat": 36.641479, "dist_to_wh_km": 30.82, "dist_to_next_km": 5.56}, {"seq": 107, "id": "昌邑顺康药店有限公司", "name": "昌邑顺康药店有限公司", "address": "山东省潍坊市昌邑市饮马镇山阳村08号", "lng": 119.405526, "lat": 36.66397, "dist_to_wh_km": 25.26, "dist_to_next_km": 0.62}, {"seq": 108, "id": "昌邑市柳疃镇西玉大药房", "name": "昌邑市柳疃镇西玉大药房", "address": "山东省潍坊市昌邑市饮马镇山阳村中心大街229号", "lng": 119.398564, "lat": 36.663968, "dist_to_wh_km": 24.71, "dist_to_next_km": 2.41}, {"seq": 109, "id": "昌邑市饮马镇顾仙村卫生室", "name": "昌邑市饮马镇顾仙村卫生室", "address": "昌邑市饮马镇顾仙村", "lng": 119.407233, "lat": 36.684465, "dist_to_wh_km": 24.46, "dist_to_next_km": 3.55}, {"seq": 110, "id": "昌邑市饮马镇东金台村卫生室", "name": "昌邑市饮马镇东金台村卫生室", "address": "昌邑市饮马镇东金台村95号", "lng": 119.440577, "lat": 36.70196, "dist_to_wh_km": 26.65, "dist_to_next_km": 4.66}, {"seq": 111, "id": "昌邑启源综合门诊部（个体工商户）", "name": "昌邑启源综合门诊部（个体工商户）", "address": "昌邑市饮马镇杨家楼村下小路西沿街", "lng": 119.471758, "lat": 36.668381, "dist_to_wh_km": 30.47, "dist_to_next_km": 0.41}, {"seq": 112, "id": "昌邑市泓康医药有限公司", "name": "昌邑市泓康医药有限公司", "address": "昌邑市饮马镇下小路318号1幢", "lng": 119.470816, "lat": 36.664791, "dist_to_wh_km": 30.53, "dist_to_next_km": 0.21}, {"seq": 113, "id": "昌邑市饮马镇东北村第二卫生室", "name": "昌邑市饮马镇东北村第二卫生室", "address": "昌邑市饮马镇东北村", "lng": 119.46981, "lat": 36.663101, "dist_to_wh_km": 30.52, "dist_to_next_km": 0.28}, {"seq": 114, "id": "昌邑市饮马镇饮马西北村第二卫生室", "name": "昌邑市饮马镇饮马西北村第二卫生室", "address": "昌邑市饮马镇饮马西北村519号", "lng": 119.466953, "lat": 36.664045, "dist_to_wh_km": 30.24, "dist_to_next_km": 0.26}, {"seq": 115, "id": "昌邑市饮马镇饮马西南村卫生室", "name": "昌邑市饮马镇饮马西南村卫生室", "address": "昌邑市饮马镇饮马西南村571号", "lng": 119.467998, "lat": 36.661897, "dist_to_wh_km": 30.42, "dist_to_next_km": 0.32}, {"seq": 116, "id": "昌邑市饮马镇饮马西南村第二卫生室", "name": "昌邑市饮马镇饮马西南村第二卫生室", "address": "昌邑市饮马镇饮马西南村226号", "lng": 119.467851, "lat": 36.659015, "dist_to_wh_km": 30.53, "dist_to_next_km": 0.95}, {"seq": 117, "id": "昌邑安芝华医药有限公司", "name": "昌邑安芝华医药有限公司", "address": "山东省潍坊市昌邑市饮马镇下小路与昌盛街路口西南侧1号", "lng": 119.471715, "lat": 36.651017, "dist_to_wh_km": 31.21, "dist_to_next_km": 0.59}, {"seq": 118, "id": "昌邑王海梅诊所", "name": "昌邑王海梅诊所", "address": "山东省潍坊市昌邑市饮马镇政府街镇政府向东 180 米路北", "lng": 119.475411, "lat": 36.655388, "dist_to_wh_km": 31.31, "dist_to_next_km": 0.01}, {"seq": 119, "id": "昌邑市饮马镇田家庄村卫生室", "name": "昌邑市饮马镇田家庄村卫生室", "address": "昌邑市饮马镇田家庄村104号", "lng": 119.475422, "lat": 36.655455, "dist_to_wh_km": 31.31, "dist_to_next_km": 0.4}, {"seq": 120, "id": "昌邑市百家康大药房有限公司", "name": "昌邑市百家康大药房有限公司", "address": "山东省潍坊市昌邑市饮马镇下小路366号601号商铺", "lng": 119.471665, "lat": 36.657362, "dist_to_wh_km": 30.92, "dist_to_next_km": 0.21}, {"seq": 121, "id": "昌邑市利众药店", "name": "昌邑市利众药店", "address": "山东省潍坊市昌邑市饮马镇下小路东侧中云机器北邻", "lng": 119.471524, "lat": 36.659225, "dist_to_wh_km": 30.83, "dist_to_next_km": 0.01}, {"seq": 122, "id": "昌邑市金康药店", "name": "昌邑市金康药店", "address": "山东省潍坊市昌邑市饮马镇下小路（中云机器有限公司北100米路东）", "lng": 119.471561, "lat": 36.659291, "dist_to_wh_km": 30.83, "dist_to_next_km": 0.75}, {"seq": 123, "id": "昌邑市饮马镇杨家楼村卫生室", "name": "昌邑市饮马镇杨家楼村卫生室", "address": "昌邑市饮马镇杨家楼村", "lng": 119.475996, "lat": 36.665004, "dist_to_wh_km": 30.95, "dist_to_next_km": 2.31}, {"seq": 124, "id": "昌邑市饮马镇丰乐屯村卫生室", "name": "昌邑市饮马镇丰乐屯村卫生室", "address": "昌邑市饮马镇丰乐屯村", "lng": 119.499558, "lat": 36.673725, "dist_to_wh_km": 32.6, "dist_to_next_km": 2.91}, {"seq": 125, "id": "昌邑市饮马镇常家屯村卫生室", "name": "昌邑市饮马镇常家屯村卫生室", "address": "昌邑市饮马镇常家屯村", "lng": 119.471907, "lat": 36.687626, "dist_to_wh_km": 29.78, "dist_to_next_km": 1.42}, {"seq": 126, "id": "昌邑市饮马镇大张家屯村卫生室", "name": "昌邑市饮马镇大张家屯村卫生室", "address": "昌邑市饮马镇大张家屯村", "lng": 119.482156, "lat": 36.697396, "dist_to_wh_km": 30.36, "dist_to_next_km": 1.66}, {"seq": 127, "id": "昌邑市饮马镇前柳杭村卫生室", "name": "昌邑市饮马镇前柳杭村卫生室", "address": "昌邑市饮马镇前柳杭村396号", "lng": 119.475494, "lat": 36.711365, "dist_to_wh_km": 29.42, "dist_to_next_km": 2.38}, {"seq": 128, "id": "昌邑市饮马镇西孙家薛庄村卫生室", "name": "昌邑市饮马镇西孙家薛庄村卫生室", "address": "昌邑市饮马镇西孙家薛庄村600号", "lng": 119.453047, "lat": 36.722888, "dist_to_wh_km": 27.21, "dist_to_next_km": 1.38}, {"seq": 129, "id": "昌邑市饮马镇石埠西村卫生室", "name": "昌邑市饮马镇石埠西村卫生室", "address": "昌邑市饮马镇石埠西村110号", "lng": 119.461354, "lat": 36.733319, "dist_to_wh_km": 27.76, "dist_to_next_km": 0.24}, {"seq": 130, "id": "昌邑市石埠康惠大药房", "name": "昌邑市石埠康惠大药房", "address": "山东省潍坊市昌邑市石埠经济发展区商业街与青峰路交叉路口西路北东数第7-12间", "lng": 119.461855, "lat": 36.735481, "dist_to_wh_km": 27.77, "dist_to_next_km": 0.38}, {"seq": 131, "id": "昌邑张浩亮诊所", "name": "昌邑张浩亮诊所", "address": "昌邑市石埠镇商业街中段", "lng": 119.466119, "lat": 36.735519, "dist_to_wh_km": 28.15, "dist_to_next_km": 0.17}, {"seq": 132, "id": "昌邑市优康药店", "name": "昌邑市优康药店", "address": "山东省潍坊市昌邑市石埠社区新兴路26号", "lng": 119.467515, "lat": 36.734431, "dist_to_wh_km": 28.29, "dist_to_next_km": 0.1}, {"seq": 133, "id": "昌邑市利众大药房有限公司", "name": "昌邑市利众大药房有限公司", "address": "山东省潍坊市昌邑市石埠经济发展区石埠北村新兴路与商业街交叉路口东南角", "lng": 119.467452, "lat": 36.735284, "dist_to_wh_km": 28.27, "dist_to_next_km": 0.55}, {"seq": 134, "id": "昌邑市百分百大药房有限公司", "name": "昌邑市百分百大药房有限公司", "address": "山东省潍坊市昌邑市石埠经济发展区隆达家园综合楼2幢103号", "lng": 119.471479, "lat": 36.738998, "dist_to_wh_km": 28.58, "dist_to_next_km": 0.14}, {"seq": 135, "id": "昌邑市饮马镇葛西村卫生室", "name": "昌邑市饮马镇葛西村卫生室", "address": "昌邑市饮马镇石埠下小路176号", "lng": 119.472281, "lat": 36.740045, "dist_to_wh_km": 28.64, "dist_to_next_km": 0.43}, {"seq": 136, "id": "昌邑市饮马镇葛东村卫生室", "name": "昌邑市饮马镇葛东村卫生室", "address": "昌邑市饮马镇葛东村232号", "lng": 119.476278, "lat": 36.742227, "dist_to_wh_km": 28.97, "dist_to_next_km": 0.96}, {"seq": 137, "id": "昌邑市饮马镇傅家庄村卫生室", "name": "昌邑市饮马镇傅家庄村卫生室", "address": "昌邑市饮马镇石埠北安街41号", "lng": 119.465647, "lat": 36.740744, "dist_to_wh_km": 28.04, "dist_to_next_km": 0.27}, {"seq": 138, "id": "昌邑市康缘药店", "name": "昌邑市康缘药店", "address": "山东省潍坊市昌邑市石埠经济发展区绿园小区北邻", "lng": 119.465683, "lat": 36.738337, "dist_to_wh_km": 28.07, "dist_to_next_km": 0.23}, {"seq": 139, "id": "昌邑市饮马镇饮马东北村第二卫生室", "name": "昌邑市饮马镇饮马东北村第二卫生室", "address": "昌邑市饮马镇饮马东北村", "lng": 119.464173, "lat": 36.736657, "dist_to_wh_km": 27.96, "dist_to_next_km": 0.39}, {"seq": 140, "id": "昌邑市石埠经济发展区卫生院", "name": "昌邑市石埠经济发展区卫生院", "address": "昌邑市石埠经济发展区驻地", "lng": 119.46092, "lat": 36.738975, "dist_to_wh_km": 27.64, "dist_to_next_km": 10.47}, {"seq": 141, "id": "昌邑市都昌街道北马埠村卫生室", "name": "昌邑市都昌街道北马埠村卫生室", "address": "昌邑市都昌街道北马埠村98号", "lng": 119.356199, "lat": 36.781703, "dist_to_wh_km": 18.22, "dist_to_next_km": 1.24}, {"seq": 142, "id": "昌邑市都昌街道张固村卫生室", "name": "昌邑市都昌街道张固村卫生室", "address": "昌邑市都昌街道张固村", "lng": 119.356359, "lat": 36.79286, "dist_to_wh_km": 18.39, "dist_to_next_km": 2.52}, {"seq": 143, "id": "昌邑市都昌街道史家洼子村第二卫生室", "name": "昌邑市都昌街道史家洼子村第二卫生室", "address": "昌邑市都昌街道史家洼子村254号", "lng": 119.37766, "lat": 36.807717, "dist_to_wh_km": 20.57, "dist_to_next_km": 1.04}, {"seq": 144, "id": "昌邑市都昌街道南逄村卫生室", "name": "昌邑市都昌街道南逄村卫生室", "address": "昌邑市都昌街道南逄村108号", "lng": 119.379207, "lat": 36.816951, "dist_to_wh_km": 20.95, "dist_to_next_km": 0.82}, {"seq": 145, "id": "昌邑市都昌街道社区卫生服务中心", "name": "昌邑市都昌街道社区卫生服务中心", "address": "昌邑市南环路423号", "lng": 119.388418, "lat": 36.816705, "dist_to_wh_km": 21.74, "dist_to_next_km": 0.08}, {"seq": 146, "id": "昌邑市同康医药大药房", "name": "昌邑市同康医药大药房", "address": "昌邑市都昌街办南逄村", "lng": 119.389109, "lat": 36.816277, "dist_to_wh_km": 21.79, "dist_to_next_km": 1.32}, {"seq": 147, "id": "昌邑市都昌街道东大营村卫生室", "name": "昌邑市都昌街道东大营村卫生室", "address": "昌邑市都昌街道东大营村184号", "lng": 119.403955, "lat": 36.816198, "dist_to_wh_km": 23.06, "dist_to_next_km": 4.85}, {"seq": 148, "id": "昌邑市围子街道西小章村第二卫生室", "name": "昌邑市围子街道西小章村第二卫生室", "address": "山东昌邑市围子街道西小章村257号", "lng": 119.444683, "lat": 36.787234, "dist_to_wh_km": 26.12, "dist_to_next_km": 0.0}, {"seq": 149, "id": "昌邑市围子街道西小章村卫生室", "name": "昌邑市围子街道西小章村卫生室", "address": "昌邑市围子街道西小章村", "lng": 119.444683, "lat": 36.787234, "dist_to_wh_km": 26.12, "dist_to_next_km": 2.22}, {"seq": 150, "id": "昌邑市围子街道东张庄村卫生室", "name": "昌邑市围子街道东张庄村卫生室", "address": "昌邑市围子街道东张庄村", "lng": 119.455962, "lat": 36.769458, "dist_to_wh_km": 27.03, "dist_to_next_km": 1.24}, {"seq": 151, "id": "昌邑市围子街道宋庄西村第二卫生室", "name": "昌邑市围子街道宋庄西村第二卫生室", "address": "昌邑市围子街道宋庄西村326号", "lng": 119.461375, "lat": 36.779725, "dist_to_wh_km": 27.55, "dist_to_next_km": 0.85}, {"seq": 152, "id": "昌邑市围子街道宋庄东村第二卫生室", "name": "昌邑市围子街道宋庄东村第二卫生室", "address": "昌邑市围子街道宋庄东村", "lng": 119.4694, "lat": 36.775576, "dist_to_wh_km": 28.24, "dist_to_next_km": 0.22}, {"seq": 153, "id": "昌邑市华之康大药房有限公司中心店", "name": "昌邑市华之康大药房有限公司中心店", "address": "山东省潍坊市昌邑市围子街道宋庄社区8号楼0单元9号", "lng": 119.471838, "lat": 36.775417, "dist_to_wh_km": 28.46, "dist_to_next_km": 0.15}, {"seq": 154, "id": "昌邑市康普药店", "name": "昌邑市康普药店", "address": "昌邑市围子街办宋庄社区联合易家超市北邻", "lng": 119.471127, "lat": 36.77666, "dist_to_wh_km": 28.4, "dist_to_next_km": 0.63}, {"seq": 155, "id": "昌邑市围子街道宋庄东村卫生室", "name": "昌邑市围子街道宋庄东村卫生室", "address": "昌邑市围子街道宋庄东村", "lng": 119.466985, "lat": 36.78124, "dist_to_wh_km": 28.06, "dist_to_next_km": 2.32}, {"seq": 156, "id": "昌邑市围子街道辛赵村第二卫生室", "name": "昌邑市围子街道辛赵村第二卫生室", "address": "昌邑市围子街道辛赵村", "lng": 119.484174, "lat": 36.796877, "dist_to_wh_km": 29.73, "dist_to_next_km": 1.07}, {"seq": 157, "id": "昌邑市围子街道刘家巷村卫生室", "name": "昌邑市围子街道刘家巷村卫生室", "address": "昌邑市围子街道刘家巷村279号", "lng": 119.472693, "lat": 36.799831, "dist_to_wh_km": 28.75, "dist_to_next_km": 2.1}, {"seq": 158, "id": "昌邑市围子街道菅斜村卫生室", "name": "昌邑市围子街道菅斜村卫生室", "address": "昌邑市围子街道菅斜村", "lng": 119.450801, "lat": 36.80686, "dist_to_wh_km": 26.94, "dist_to_next_km": 0.71}, {"seq": 159, "id": "昌邑市围子街道孙斜村第二卫生室", "name": "昌邑市围子街道孙斜村第二卫生室", "address": "昌邑市围子街道孙斜村", "lng": 119.443126, "lat": 36.805277, "dist_to_wh_km": 26.24, "dist_to_next_km": 0.58}, {"seq": 160, "id": "昌邑市围子街道后斜村卫生室", "name": "昌邑市围子街道后斜村卫生室", "address": "昌邑市围子街道后斜村25号", "lng": 119.440977, "lat": 36.810198, "dist_to_wh_km": 26.14, "dist_to_next_km": 0.42}, {"seq": 161, "id": "昌邑市围子街道军屯村卫生室", "name": "昌邑市围子街道军屯村卫生室", "address": "昌邑市围子街道军屯村92号", "lng": 119.440078, "lat": 36.813928, "dist_to_wh_km": 26.15, "dist_to_next_km": 1.38}, {"seq": 162, "id": "昌邑市围子街道北金家口村卫生室", "name": "昌邑市围子街道北金家口村卫生室", "address": "昌邑市围子街道北金家口村", "lng": 119.425155, "lat": 36.817319, "dist_to_wh_km": 24.93, "dist_to_next_km": 0.08}, {"seq": 163, "id": "昌邑市围子街道北金家口村第二卫生室", "name": "昌邑市围子街道北金家口村第二卫生室", "address": "昌邑市围子街道北金家口村", "lng": 119.426024, "lat": 36.817621, "dist_to_wh_km": 25.01, "dist_to_next_km": 0.73}, {"seq": 164, "id": "昌邑市围子街道大姜村卫生室", "name": "昌邑市围子街道大姜村卫生室", "address": "昌邑市围子街道大姜村", "lng": 119.42967, "lat": 36.823543, "dist_to_wh_km": 25.48, "dist_to_next_km": 0.34}, {"seq": 165, "id": "昌邑市围子街道西刘家巷村卫生室", "name": "昌邑市围子街道西刘家巷村卫生室", "address": "昌邑市围子街道西刘家巷村", "lng": 119.427725, "lat": 36.826175, "dist_to_wh_km": 25.39, "dist_to_next_km": 0.13}, {"seq": 166, "id": "昌邑市围子街道韩家巷村卫生室", "name": "昌邑市围子街道韩家巷村卫生室", "address": "昌邑市围子街道韩家巷村", "lng": 119.42793, "lat": 36.827297, "dist_to_wh_km": 25.44, "dist_to_next_km": 1.79}, {"seq": 167, "id": "昌邑市围子街道东丁庄村卫生室", "name": "昌邑市围子街道东丁庄村卫生室", "address": "昌邑市围子街道东丁庄村", "lng": 119.445861, "lat": 36.834504, "dist_to_wh_km": 27.19, "dist_to_next_km": 1.68}, {"seq": 168, "id": "昌邑市围子街道马连岔村卫生室", "name": "昌邑市围子街道马连岔村卫生室", "address": "昌邑市围子街道马连岔村", "lng": 119.459901, "lat": 36.824389, "dist_to_wh_km": 28.12, "dist_to_next_km": 1.55}, {"seq": 169, "id": "昌邑市围子街道六股路村卫生室", "name": "昌邑市围子街道六股路村卫生室", "address": "昌邑市围子街道六股路村", "lng": 119.476618, "lat": 36.820365, "dist_to_wh_km": 29.48, "dist_to_next_km": 0.21}, {"seq": 170, "id": "昌邑市围子街道邢家村第二卫生室", "name": "昌邑市围子街道邢家村第二卫生室", "address": "昌邑市围子街道邢家村5号楼门头房101", "lng": 119.477911, "lat": 36.82194, "dist_to_wh_km": 29.62, "dist_to_next_km": 0.09}, {"seq": 171, "id": "昌邑市围子街道邢家庄村卫生室", "name": "昌邑市围子街道邢家庄村卫生室", "address": "昌邑市围子街道邢家庄村", "lng": 119.478968, "lat": 36.821947, "dist_to_wh_km": 29.72, "dist_to_next_km": 0.47}, {"seq": 172, "id": "潍坊市康济堂大药房有限公司", "name": "潍坊市康济堂大药房有限公司", "address": "山东省潍坊市昌邑市围子街道北密村52号", "lng": 119.484237, "lat": 36.822107, "dist_to_wh_km": 30.18, "dist_to_next_km": 0.4}, {"seq": 173, "id": "昌邑市围子街道北密村第二卫生室", "name": "昌邑市围子街道北密村第二卫生室", "address": "昌邑市围子街道北密村", "lng": 119.485351, "lat": 36.818623, "dist_to_wh_km": 30.2, "dist_to_next_km": 1.01}, {"seq": 174, "id": "昌邑市围子街道董家村卫生室", "name": "昌邑市围子街道董家村卫生室", "address": "昌邑市围子街道董家村", "lng": 119.495715, "lat": 36.822422, "dist_to_wh_km": 31.19, "dist_to_next_km": 3.22}, {"seq": 175, "id": "昌邑市华康药店有限公司", "name": "昌邑市华康药店有限公司", "address": "山东省潍坊市昌邑围子街道仓街社区仓街信用社西50米路北", "lng": 119.510263, "lat": 36.848962, "dist_to_wh_km": 33.15, "dist_to_next_km": 0.33}, {"seq": 176, "id": "昌邑市精神卫生中心", "name": "昌邑市精神卫生中心", "address": "昌邑市围子街道东环路99号、昌邑市交通街37号", "lng": 119.513114, "lat": 36.847064, "dist_to_wh_km": 33.33, "dist_to_next_km": 0.21}, {"seq": 177, "id": "昌邑市德泰大药房", "name": "昌邑市德泰大药房", "address": "昌邑市围子街道仓街社区（东环路与围胶路十字路口南20米路东）", "lng": 119.513859, "lat": 36.84887, "dist_to_wh_km": 33.45, "dist_to_next_km": 0.19}, {"seq": 178, "id": "昌邑市华卫医药有限公司", "name": "昌邑市华卫医药有限公司", "address": "山东省潍坊市昌邑市围子街道仓街村（仓街邮政局北邻）", "lng": 119.513271, "lat": 36.850541, "dist_to_wh_km": 33.45, "dist_to_next_km": 0.07}, {"seq": 179, "id": "昌邑市围子街道仓街村第二卫生室", "name": "昌邑市围子街道仓街村第二卫生室", "address": "昌邑市围子街道东环路8号", "lng": 119.513283, "lat": 36.851213, "dist_to_wh_km": 33.47, "dist_to_next_km": 1.3}, {"seq": 180, "id": "昌邑市围子街道姚家郜村卫生室", "name": "昌邑市围子街道姚家郜村卫生室", "address": "昌邑市围子街道姚家郜村217号", "lng": 119.518693, "lat": 36.862116, "dist_to_wh_km": 34.29, "dist_to_next_km": 1.22}, {"seq": 181, "id": "昌邑市围子街道明家郜村卫生室", "name": "昌邑市围子街道明家郜村卫生室", "address": "昌邑市围子街道明家郜村", "lng": 119.516775, "lat": 36.872961, "dist_to_wh_km": 34.52, "dist_to_next_km": 0.29}, {"seq": 182, "id": "昌邑市围子街道徐家郜村卫生室", "name": "昌邑市围子街道徐家郜村卫生室", "address": "昌邑市围子街道徐家郜村", "lng": 119.514024, "lat": 36.871625, "dist_to_wh_km": 34.24, "dist_to_next_km": 3.06}, {"seq": 183, "id": "昌邑市围子街道凤凰庄村卫生室", "name": "昌邑市围子街道凤凰庄村卫生室", "address": "昌邑市围子街道凤凰庄村", "lng": 119.4796, "lat": 36.871307, "dist_to_wh_km": 31.37, "dist_to_next_km": 1.4}, {"seq": 184, "id": "昌邑市围子街道天成店村卫生室", "name": "昌邑市围子街道天成店村卫生室", "address": "昌邑市围子街道天成店村商贸楼289-8号", "lng": 119.475578, "lat": 36.859179, "dist_to_wh_km": 30.55, "dist_to_next_km": 0.68}, {"seq": 185, "id": "昌邑市围子街道义气镇村卫生室", "name": "昌邑市围子街道义气镇村卫生室", "address": "昌邑市围子街道义气镇村", "lng": 119.468683, "lat": 36.85649, "dist_to_wh_km": 29.88, "dist_to_next_km": 0.99}, {"seq": 186, "id": "昌邑市恒泰大药店", "name": "昌邑市恒泰大药店", "address": "山东省潍坊市昌邑市围子街道围子村昌盛街与石马路交叉口西50米路北", "lng": 119.462879, "lat": 36.848917, "dist_to_wh_km": 29.11, "dist_to_next_km": 0.15}, {"seq": 187, "id": "昌邑祝永超中医（综合）诊所", "name": "昌邑祝永超中医（综合）诊所", "address": "昌邑市昌盛街14号", "lng": 119.461167, "lat": 36.848983, "dist_to_wh_km": 28.97, "dist_to_next_km": 0.3}, {"seq": 188, "id": "昌邑市围子街道卫生院", "name": "昌邑市围子街道卫生院", "address": "昌邑市围子街道昌盛街142号", "lng": 119.457851, "lat": 36.848725, "dist_to_wh_km": 28.68, "dist_to_next_km": 0.76}, {"seq": 189, "id": "昌邑市围子街道永富庄村卫生室", "name": "昌邑市围子街道永富庄村卫生室", "address": "昌邑市围子街道永富庄村", "lng": 119.456022, "lat": 36.842077, "dist_to_wh_km": 28.3, "dist_to_next_km": 0.93}, {"seq": 190, "id": "昌邑市围子街道南宫村第二卫生室", "name": "昌邑市围子街道南宫村第二卫生室", "address": "昌邑市围子街道南宫村沿街西楼商铺9号10号", "lng": 119.447456, "lat": 36.846918, "dist_to_wh_km": 27.74, "dist_to_next_km": 2.52}, {"seq": 191, "id": "昌邑宇华健康管理有限公司利民街诊所", "name": "昌邑宇华健康管理有限公司利民街诊所", "address": "昌邑市奎聚街道利民街15-1、15-2号", "lng": 119.420071, "lat": 36.852631, "dist_to_wh_km": 25.68, "dist_to_next_km": 0.22}, {"seq": 192, "id": "昌邑刘修义诊所", "name": "昌邑刘修义诊所", "address": "昌邑市翠峰御景21幢102室", "lng": 119.419004, "lat": 36.850818, "dist_to_wh_km": 25.51, "dist_to_next_km": 0.03}, {"seq": 193, "id": "昌邑市奎聚街道中台村卫生室", "name": "昌邑市奎聚街道中台村卫生室", "address": "昌邑市新兴街东首59-6(翠峰御景南门西侧)", "lng": 119.418681, "lat": 36.850798, "dist_to_wh_km": 25.49, "dist_to_next_km": 0.26}, {"seq": 194, "id": "昌邑朱永山诊所", "name": "昌邑朱永山诊所", "address": "山东省潍坊市昌邑市奎聚街道新兴街文景明居南门东第3个门头房", "lng": 119.415712, "lat": 36.850733, "dist_to_wh_km": 25.24, "dist_to_next_km": 0.25}, {"seq": 195, "id": "昌邑市奎聚街道东店村第二卫生室", "name": "昌邑市奎聚街道东店村第二卫生室", "address": "昌邑市利民街51号", "lng": 119.416632, "lat": 36.852893, "dist_to_wh_km": 25.4, "dist_to_next_km": 0.05}, {"seq": 196, "id": "昌邑恒德大药房有限公司", "name": "昌邑恒德大药房有限公司", "address": "山东省潍坊市昌邑市奎聚街道利民街73号、75号", "lng": 119.416078, "lat": 36.852899, "dist_to_wh_km": 25.36, "dist_to_next_km": 0.32}, {"seq": 197, "id": "昌邑市奎聚街道东店村第三卫生室", "name": "昌邑市奎聚街道东店村第三卫生室", "address": "昌邑市城里东街9-11号", "lng": 119.415416, "lat": 36.855748, "dist_to_wh_km": 25.43, "dist_to_next_km": 0.08}, {"seq": 198, "id": "昌邑丁启尧诊所", "name": "昌邑丁启尧诊所", "address": "昌邑市城里东街10-20号", "lng": 119.414601, "lat": 36.855465, "dist_to_wh_km": 25.35, "dist_to_next_km": 0.44}, {"seq": 199, "id": "昌邑昌城医院利民街诊所", "name": "昌邑昌城医院利民街诊所", "address": "昌邑市利民街 170号-2-3 商铺", "lng": 119.410875, "lat": 36.852875, "dist_to_wh_km": 24.93, "dist_to_next_km": 0.28}, {"seq": 200, "id": "昌邑康鑫综合门诊部", "name": "昌邑康鑫综合门诊部", "address": "昌邑市新兴街东段路北", "lng": 119.409946, "lat": 36.850451, "dist_to_wh_km": 24.75, "dist_to_next_km": 0.1}, {"seq": 201, "id": "昌邑市华之康大药房有限公司", "name": "昌邑市华之康大药房有限公司", "address": "山东省潍坊市昌邑市奎聚街道新兴街199号", "lng": 119.408837, "lat": 36.850302, "dist_to_wh_km": 24.65, "dist_to_next_km": 0.19}, {"seq": 202, "id": "昌邑市奎聚街道铁匠营社区居民委员会卫生室", "name": "昌邑市奎聚街道铁匠营社区居民委员会卫生室", "address": "昌邑市奎聚街道铁匠营社区居民委员会", "lng": 119.406803, "lat": 36.849778, "dist_to_wh_km": 24.46, "dist_to_next_km": 0.38}, {"seq": 203, "id": "昌邑昌城医院", "name": "昌邑昌城医院", "address": "昌邑市利民街328号", "lng": 119.405129, "lat": 36.852961, "dist_to_wh_km": 24.46, "dist_to_next_km": 0.37}, {"seq": 204, "id": "昌邑市奎聚街道社区卫生服务中心", "name": "昌邑市奎聚街道社区卫生服务中心", "address": "昌邑市城里东街235号(预防保健计划免疫接种门诊在利民街187号，第二接种门诊在富昌街326号）", "lng": 119.403714, "lat": 36.856108, "dist_to_wh_km": 24.49, "dist_to_next_km": 0.41}, {"seq": 205, "id": "昌邑张岩中医（综合）诊所", "name": "昌邑张岩中医（综合）诊所", "address": "昌邑市解放路董家城后沿街", "lng": 119.403609, "lat": 36.859811, "dist_to_wh_km": 24.65, "dist_to_next_km": 0.28}, {"seq": 206, "id": "昌邑市奎聚街道郝家城后村卫生室", "name": "昌邑市奎聚街道郝家城后村卫生室", "address": "昌邑市奎聚街道郝家城后村解放路7-9号", "lng": 119.403424, "lat": 36.862347, "dist_to_wh_km": 24.75, "dist_to_next_km": 0.58}, {"seq": 207, "id": "昌邑市康泰大药房有限公司", "name": "昌邑市康泰大药房有限公司", "address": "山东省潍坊市昌邑市都昌街道育新街219号-2", "lng": 119.400212, "lat": 36.866844, "dist_to_wh_km": 24.72, "dist_to_next_km": 0.33}, {"seq": 208, "id": "昌邑振华盐业有限公司卫生室", "name": "昌邑振华盐业有限公司卫生室", "address": "昌邑市育新街332号", "lng": 119.396454, "lat": 36.866783, "dist_to_wh_km": 24.42, "dist_to_next_km": 0.15}, {"seq": 209, "id": "昌邑市颐康大药房有限公司", "name": "昌邑市颐康大药房有限公司", "address": "山东省潍坊市昌邑市奎聚街道北海路44号", "lng": 119.395254, "lat": 36.867716, "dist_to_wh_km": 24.37, "dist_to_next_km": 0.15}, {"seq": 210, "id": "昌邑闫爱红诊所", "name": "昌邑闫爱红诊所", "address": "山东省潍坊市昌邑市奎聚街道育新街 346号", "lng": 119.395898, "lat": 36.866506, "dist_to_wh_km": 24.36, "dist_to_next_km": 0.35}, {"seq": 211, "id": "昌邑市都昌街道傅徐城后村第二卫生室", "name": "昌邑市都昌街道傅徐城后村第二卫生室", "address": "昌邑市都昌街道富昌街永和苑沿街1号西14号", "lng": 119.394745, "lat": 36.863498, "dist_to_wh_km": 24.12, "dist_to_next_km": 0.21}, {"seq": 212, "id": "昌邑邹业兴诊所", "name": "昌邑邹业兴诊所", "address": "昌邑市富昌街225号", "lng": 119.396128, "lat": 36.861976, "dist_to_wh_km": 24.15, "dist_to_next_km": 0.04}, {"seq": 213, "id": "昌邑市奎聚街道于范城后村卫生室", "name": "昌邑市奎聚街道于范城后村卫生室", "address": "昌邑市奎聚街道育新苑小区29号综合楼商铺101室", "lng": 119.396379, "lat": 36.86173, "dist_to_wh_km": 24.16, "dist_to_next_km": 0.45}, {"seq": 214, "id": "昌邑市都昌街道傅徐城后村卫生室", "name": "昌邑市都昌街道傅徐城后村卫生室", "address": "昌邑市富昌街259号永和苑小区综合2#东6户", "lng": 119.391344, "lat": 36.862025, "dist_to_wh_km": 23.77, "dist_to_next_km": 0.59}, {"seq": 215, "id": "昌邑市都昌街道刘家辛戈社区居民委员会卫生室", "name": "昌邑市都昌街道刘家辛戈社区居民委员会卫生室", "address": "城里西街161号", "lng": 119.38721, "lat": 36.857931, "dist_to_wh_km": 23.24, "dist_to_next_km": 0.1}, {"seq": 216, "id": "昌邑信意健康管理有限公司卫生室", "name": "昌邑信意健康管理有限公司卫生室", "address": "昌邑市都昌街道城西里西街102号", "lng": 119.388117, "lat": 36.857447, "dist_to_wh_km": 23.29, "dist_to_next_km": 0.01}, {"seq": 217, "id": "昌邑市联康大药房有限公司", "name": "昌邑市联康大药房有限公司", "address": "山东省潍坊市昌邑市都昌街道城里西街76号", "lng": 119.387975, "lat": 36.857375, "dist_to_wh_km": 23.28, "dist_to_next_km": 0.21}, {"seq": 218, "id": "昌邑市和平药店", "name": "昌邑市和平药店", "address": "昌邑市利民街643号（利民街北建设路东）", "lng": 119.387964, "lat": 36.855531, "dist_to_wh_km": 23.19, "dist_to_next_km": 0.5}, {"seq": 219, "id": "昌邑市中医院", "name": "昌邑市中医院", "address": "昌邑市利民街187号", "lng": 119.392567, "lat": 36.852959, "dist_to_wh_km": 23.44, "dist_to_next_km": 0.46}, {"seq": 220, "id": "昌邑圣怡综合门诊部", "name": "昌邑圣怡综合门诊部", "address": "昌邑市新村街中段路南110号", "lng": 119.396875, "lat": 36.850725, "dist_to_wh_km": 23.69, "dist_to_next_km": 0.39}, {"seq": 221, "id": "昌邑黄琳诊所", "name": "昌邑黄琳诊所", "address": "昌邑市北海路阳光嘉园沿街商铺D5-北2", "lng": 119.393456, "lat": 36.848603, "dist_to_wh_km": 23.32, "dist_to_next_km": 0.43}, {"seq": 222, "id": "昌邑陈肖玲诊所", "name": "昌邑陈肖玲诊所", "address": "昌邑市交通街464-5号中百东巷11号", "lng": 119.395492, "lat": 36.845064, "dist_to_wh_km": 23.33, "dist_to_next_km": 0.36}, {"seq": 223, "id": "昌邑市奎聚街道南隅社区居民委员会第二卫生室", "name": "昌邑市奎聚街道南隅社区居民委员会第二卫生室", "address": "昌邑市交通街339号", "lng": 119.399428, "lat": 36.845712, "dist_to_wh_km": 23.69, "dist_to_next_km": 0.43}, {"seq": 224, "id": "昌邑市恒泰劳务有限公司平安街诊所", "name": "昌邑市恒泰劳务有限公司平安街诊所", "address": "山东省潍坊市昌邑市奎聚街道平安街1677号（解放路南首西侧）", "lng": 119.401287, "lat": 36.842164, "dist_to_wh_km": 23.7, "dist_to_next_km": 0.76}, {"seq": 225, "id": "昌邑李治辉中医（综合）诊所", "name": "昌邑李治辉中医（综合）诊所", "address": "昌邑市奎聚街道交通街207号", "lng": 119.408691, "lat": 36.845644, "dist_to_wh_km": 24.45, "dist_to_next_km": 1.05}, {"seq": 226, "id": "昌邑张言慎中医（综合）诊所", "name": "昌邑张言慎中医（综合）诊所", "address": "昌邑市新昌路南首邑城水岸西门院内 (路南从西数第一间门头)", "lng": 119.415975, "lat": 36.838225, "dist_to_wh_km": 24.78, "dist_to_next_km": 1.0}, {"seq": 227, "id": "昌邑乔莹莹诊所", "name": "昌邑乔莹莹诊所", "address": "昌邑市奎聚路259号", "lng": 119.407358, "lat": 36.832405, "dist_to_wh_km": 23.85, "dist_to_next_km": 0.26}, {"seq": 228, "id": "潍坊市联康药店", "name": "潍坊市联康药店", "address": "山东省潍坊市昌邑市奎聚街道奎聚路369号19幢商铺02、03", "lng": 119.406603, "lat": 36.830123, "dist_to_wh_km": 23.71, "dist_to_next_km": 0.11}, {"seq": 229, "id": "昌邑市奎聚街道南庄头村卫生室", "name": "昌邑市奎聚街道南庄头村卫生室", "address": "潍坊市昌邑市奎聚大道369号", "lng": 119.405425, "lat": 36.830031, "dist_to_wh_km": 23.6, "dist_to_next_km": 0.27}, {"seq": 230, "id": "昌邑市奎聚街道南庄头村第二卫生室", "name": "昌邑市奎聚街道南庄头村第二卫生室", "address": "昌邑市南苑东街157号", "lng": 119.405296, "lat": 36.83243, "dist_to_wh_km": 23.67, "dist_to_next_km": 1.12}, {"seq": 231, "id": "昌邑市奎聚街道辛置三村卫生室", "name": "昌邑市奎聚街道辛置三村卫生室", "address": "昌邑北海路661号", "lng": 119.392732, "lat": 36.832466, "dist_to_wh_km": 22.61, "dist_to_next_km": 0.29}, {"seq": 232, "id": "昌邑魏晓茶诊所", "name": "昌邑魏晓茶诊所", "address": "昌邑市北海路677号", "lng": 119.390569, "lat": 36.830532, "dist_to_wh_km": 22.36, "dist_to_next_km": 0.35}, {"seq": 233, "id": "昌邑郭明星诊所", "name": "昌邑郭明星诊所", "address": "昌邑市北海路南首 680 号", "lng": 119.391567, "lat": 36.833572, "dist_to_wh_km": 22.56, "dist_to_next_km": 0.16}, {"seq": 234, "id": "昌邑市奎聚街道辛置三村第二卫生室", "name": "昌邑市奎聚街道辛置三村第二卫生室", "address": "昌邑市奎聚街道辛置三村北海路607号", "lng": 119.391181, "lat": 36.835005, "dist_to_wh_km": 22.58, "dist_to_next_km": 0.74}, {"seq": 235, "id": "昌邑市都昌街道南店村卫生室", "name": "昌邑市都昌街道南店村卫生室", "address": "昌邑市都昌街道南店村香邑步行街A4-108", "lng": 119.389138, "lat": 36.841437, "dist_to_wh_km": 22.66, "dist_to_next_km": 0.47}, {"seq": 236, "id": "昌邑于佳诊所", "name": "昌邑于佳诊所", "address": "昌邑市交通街617号1幢115", "lng": 119.386217, "lat": 36.844942, "dist_to_wh_km": 22.57, "dist_to_next_km": 0.55}, {"seq": 237, "id": "昌邑市益宁医药有限公司", "name": "昌邑市益宁医药有限公司", "address": "山东省潍坊市昌邑市都昌街道建设路187号", "lng": 119.387063, "lat": 36.849823, "dist_to_wh_km": 22.85, "dist_to_next_km": 0.4}, {"seq": 238, "id": "昌邑市都昌街道山前村卫生室", "name": "昌邑市都昌街道山前村卫生室", "address": "昌邑市都昌街道山前村352号", "lng": 119.382629, "lat": 36.849604, "dist_to_wh_km": 22.48, "dist_to_next_km": 0.37}, {"seq": 239, "id": "昌邑市都昌街道马家村卫生室", "name": "昌邑市都昌街道马家村卫生室", "address": "昌邑市都昌街道马家村都昌路395号", "lng": 119.382226, "lat": 36.852932, "dist_to_wh_km": 22.6, "dist_to_next_km": 0.26}, {"seq": 240, "id": "昌邑华康医院", "name": "昌邑华康医院", "address": "昌邑市利民街730-26号", "lng": 119.380569, "lat": 36.854862, "dist_to_wh_km": 22.56, "dist_to_next_km": 0.9}, {"seq": 241, "id": "昌邑市都昌街道前埠村卫生室", "name": "昌邑市都昌街道前埠村卫生室", "address": "昌邑市都昌街道都昌路与富昌街交叉路口北50米路东沿街房由南向北第5、6间", "lng": 119.383375, "lat": 36.862675, "dist_to_wh_km": 23.17, "dist_to_next_km": 0.57}, {"seq": 242, "id": "昌邑市都昌街道东安家埠社区居民委员会卫生室", "name": "昌邑市都昌街道东安家埠社区居民委员会卫生室", "address": "昌邑市都昌街道东安家埠社区", "lng": 119.38663, "lat": 36.867112, "dist_to_wh_km": 23.66, "dist_to_next_km": 2.04}, {"seq": 243, "id": "昌邑康华医药有限公司", "name": "昌邑康华医药有限公司", "address": "山东省潍坊市昌邑市奎聚街道李家埠村北海路与双石路交叉口路北东起1101号商铺", "lng": 119.395928, "lat": 36.883922, "dist_to_wh_km": 25.3, "dist_to_next_km": 0.03}, {"seq": 244, "id": "昌邑市心一堂医药有限公司", "name": "昌邑市心一堂医药有限公司", "address": "山东省潍坊市昌邑市奎聚街道李家埠村双石路北侧", "lng": 119.396278, "lat": 36.883911, "dist_to_wh_km": 25.33, "dist_to_next_km": 2.3}, {"seq": 245, "id": "昌邑齐淑珍诊所", "name": "昌邑齐淑珍诊所", "address": "昌邑市育新街114号", "lng": 119.410273, "lat": 36.866513, "dist_to_wh_km": 25.5, "dist_to_next_km": 0.88}, {"seq": 246, "id": "昌邑市奎聚街道五里村卫生室", "name": "昌邑市奎聚街道五里村卫生室", "address": "昌邑市奎聚街道东方丽都沿街4号", "lng": 119.416701, "lat": 36.860484, "dist_to_wh_km": 25.74, "dist_to_next_km": 1.69}, {"seq": 247, "id": "昌邑刘磊诊所", "name": "昌邑刘磊诊所", "address": "昌邑市一中南街潍水龙城一号楼", "lng": 119.435342, "lat": 36.85746, "dist_to_wh_km": 27.14, "dist_to_next_km": 0.58}, {"seq": 248, "id": "昌邑市奎聚街道王葛山下村卫生室", "name": "昌邑市奎聚街道王葛山下村卫生室", "address": "昌邑市文东路西沿街房14号", "lng": 119.432311, "lat": 36.862102, "dist_to_wh_km": 27.09, "dist_to_next_km": 0.21}, {"seq": 249, "id": "昌邑市奎聚街道单家村卫生室", "name": "昌邑市奎聚街道单家村卫生室", "address": "昌邑市奎聚街道单家村文东路169号", "lng": 119.432399, "lat": 36.864005, "dist_to_wh_km": 27.18, "dist_to_next_km": 1.93}, {"seq": 250, "id": "昌邑市奎聚街道石湾店南村第二卫生室", "name": "昌邑市奎聚街道石湾店南村第二卫生室", "address": "昌邑市奎聚街道石湾店南村", "lng": 119.438842, "lat": 36.880543, "dist_to_wh_km": 28.47, "dist_to_next_km": 1.71}, {"seq": 251, "id": "昌邑市奎聚街道花园村卫生室", "name": "昌邑市奎聚街道花园村卫生室", "address": "昌邑市奎聚街道花园村", "lng": 119.433266, "lat": 36.895274, "dist_to_wh_km": 28.81, "dist_to_next_km": 1.13}, {"seq": 252, "id": "昌邑市奎聚街道黄家辛庄村卫生室", "name": "昌邑市奎聚街道黄家辛庄村卫生室", "address": "山东省潍坊市昌邑市奎聚街道黄家辛庄村", "lng": 119.420975, "lat": 36.892775, "dist_to_wh_km": 27.72, "dist_to_next_km": 0.52}, {"seq": 253, "id": "昌邑市奎聚街道高家岔河村卫生室", "name": "昌邑市奎聚街道高家岔河村卫生室", "address": "昌邑市奎聚街道高家岔河村", "lng": 119.416756, "lat": 36.896064, "dist_to_wh_km": 27.59, "dist_to_next_km": 1.18}, {"seq": 254, "id": "昌邑市奎聚街道郭家岔河村卫生室", "name": "昌邑市奎聚街道郭家岔河村卫生室", "address": "昌邑市奎聚街道郭家岔河村", "lng": 119.409312, "lat": 36.904887, "dist_to_wh_km": 27.56, "dist_to_next_km": 1.28}, {"seq": 255, "id": "昌邑市奎聚街道张家辛庄村卫生室", "name": "昌邑市奎聚街道张家辛庄村卫生室", "address": "昌邑市奎聚街道张家辛庄村", "lng": 119.401215, "lat": 36.89538, "dist_to_wh_km": 26.38, "dist_to_next_km": 0.42}, {"seq": 256, "id": "昌邑市奎聚街道吴家辛庄村卫生室", "name": "昌邑市奎聚街道吴家辛庄村卫生室", "address": "昌邑市奎聚街道吴家辛庄村130号", "lng": 119.396511, "lat": 36.895036, "dist_to_wh_km": 26.01, "dist_to_next_km": 2.13}, {"seq": 257, "id": "昌邑市柳疃镇太平集村卫生室", "name": "昌邑市柳疃镇太平集村卫生室", "address": "昌邑市柳疃镇太平集村", "lng": 119.384899, "lat": 36.911835, "dist_to_wh_km": 26.26, "dist_to_next_km": 2.85}, {"seq": 258, "id": "昌邑市奎聚街道东逄翟村卫生室", "name": "昌邑市奎聚街道东逄翟村卫生室", "address": "昌邑市奎聚街道东逄翟村", "lng": 119.364186, "lat": 36.892294, "dist_to_wh_km": 23.47, "dist_to_next_km": 0.62}, {"seq": 259, "id": "昌邑市奎聚街道西逄泽村生室", "name": "昌邑市奎聚街道西逄泽村生室", "address": "昌邑市奎聚街道西逄泽村152号", "lng": 119.357251, "lat": 36.893052, "dist_to_wh_km": 23.03, "dist_to_next_km": 1.34}, {"seq": 260, "id": "昌邑市奎聚街道徐家鄑水村卫生室", "name": "昌邑市奎聚街道徐家鄑水村卫生室", "address": "昌邑市奎聚街道徐家鄙水村", "lng": 119.364283, "lat": 36.882365, "dist_to_wh_km": 22.84, "dist_to_next_km": 0.64}, {"seq": 261, "id": "昌邑市晟康医药有限公司", "name": "昌邑市晟康医药有限公司", "address": "山东省潍坊市昌邑市奎聚街道十字路村中心十字路口南60米路东", "lng": 119.357925, "lat": 36.879625, "dist_to_wh_km": 22.2, "dist_to_next_km": 1.87}, {"seq": 262, "id": "潍坊养天和仁和药店连锁有限公司", "name": "潍坊养天和仁和药店连锁有限公司", "address": "山东省昌邑市富昌街西首华昌公交公司院内", "lng": 119.362183, "lat": 36.863177, "dist_to_wh_km": 21.55, "dist_to_next_km": 3.01}, {"seq": 263, "id": "昌邑市都昌街道南褚庄村卫生室", "name": "昌邑市都昌街道南褚庄村卫生室", "address": "昌邑市都昌街道南褚庄村78号", "lng": 119.342608, "lat": 36.841073, "dist_to_wh_km": 18.85, "dist_to_next_km": 3.12}, {"seq": 264, "id": "昌邑市都昌街道中裴庄村卫生室", "name": "昌邑市都昌街道中裴庄村卫生室", "address": "昌邑市都昌街道中裴庄村60号", "lng": 119.308284, "lat": 36.835576, "dist_to_wh_km": 15.86, "dist_to_next_km": 0.8}, {"seq": 265, "id": "昌邑市都昌街道双台社区卫生服务中心", "name": "昌邑市都昌街道双台社区卫生服务中心", "address": "昌邑市官靶路45号", "lng": 119.299325, "lat": 36.835372, "dist_to_wh_km": 15.16, "dist_to_next_km": 2.27}, {"seq": 266, "id": "昌邑市都昌街道东侯富庄村卫生室", "name": "昌邑市都昌街道东侯富庄村卫生室", "address": "昌邑市都昌街道东侯富庄村", "lng": 119.289291, "lat": 36.854169, "dist_to_wh_km": 15.61, "dist_to_next_km": 0.23}, {"seq": 267, "id": "昌邑市都昌街道中侯富庄村卫生室", "name": "昌邑市都昌街道中侯富庄村卫生室", "address": "昌邑市都昌街道中侯富庄村", "lng": 119.286757, "lat": 36.854604, "dist_to_wh_km": 15.46, "dist_to_next_km": 3.85}, {"seq": 268, "id": "昌邑市都昌街道双台二村卫生室", "name": "昌邑市都昌街道双台二村卫生室", "address": "昌邑市都昌街道双台二村", "lng": 119.271495, "lat": 36.822194, "dist_to_wh_km": 12.28, "dist_to_next_km": 3.55}], "est_dist_km": 379.5, "est_dist_real_km": 531.3, "total_stores": 268, "usage": "订单门店按 ring 中的 seq 正序排列，从仓库出发依次配送，最后回仓"};
+drawRing(PLAN_DATA.ring, '#e94560', 'all');
+
+showZone('all');
+</script>
+</body>
+</html>
