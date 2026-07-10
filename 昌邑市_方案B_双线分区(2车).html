@@ -93,18 +93,22 @@ var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // 从 Supabase 加载采集状态
 var collectedMap = {};
 async function loadCollected() {
-    var all = [];
-    var from = 0, size = 1000;
-    while (true) {
-        var r = await db.from('store_points').select('name,status', {count:'exact'}).range(from, from+size-1);
-        if (r.data) all = all.concat(r.data);
-        if (!r.data || r.data.length < size) break;
-        from += size;
+    try {
+        var all = [];
+        var from = 0, size = 1000;
+        while (true) {
+            var r = await db.from('store_points').select('name,status').range(from, from+size-1);
+            if (r.data) all = all.concat(r.data);
+            if (!r.data || r.data.length < size) break;
+            from += size;
+        }
+        all.forEach(function(s) {
+            if (s.status === 'done') collectedMap[s.name] = true;
+        });
+        refreshAllMarkers();
+    } catch(e) {
+        console.log('Supabase 加载失败，使用空状态:', e.message);
     }
-    all.forEach(function(s) {
-        if (s.status === 'done') collectedMap[s.name] = true;
-    });
-    refreshAllMarkers();
 }
 
 async function saveCollected(name, isCollected) {
