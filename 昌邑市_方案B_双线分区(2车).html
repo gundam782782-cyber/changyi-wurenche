@@ -128,16 +128,15 @@ function buildInfoWindow(store){
     var navUrl='https://uri.amap.com/navigation?to='+store.lng+','+store.lat+','+encodeURIComponent(store.name)+'&mode=car&callnative=1';
     return '<div class="info-window"><h4>'+store.name+'</h4><div class="addr">'+(store.address||'')+'</div><div>Seq:<b>'+store.seq+'</b> | 距仓:<b>'+store.dist_to_wh_km+'km</b></div><div style="display:flex;align-items:center;flex-wrap:wrap;"><button class="collect-btn '+cls+'" data-store="'+nm+'">'+txt+'</button><a class="nav-btn" href="'+navUrl+'" target="_blank">🧭 导航</a></div></div>';
 }
-document.addEventListener('click',async function(e){
+document.addEventListener('click',function(e){
     if(e.target.classList.contains('collect-btn')){
         var name=e.target.getAttribute('data-store');
         name=name.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
         collectedMap[name]=!collectedMap[name];
-        var si = [] && false || allStoresData && allStoresData.find(function(s){return s.name === name;});
-        await saveCollected(name, collectedMap[name], si);
         e.target.className='collect-btn '+(collectedMap[name]?'collected':'not-collected');
         e.target.textContent=collectedMap[name]?'已采集':'未采集';
         refreshAllMarkers();
+        saveCollected(name, collectedMap[name]).catch(function(){});
     }
 });
 
