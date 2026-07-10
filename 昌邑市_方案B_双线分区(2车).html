@@ -94,30 +94,25 @@ var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var collectedMap = {};
 async function loadCollected() {
     try {
-        var all = [];
-        var from = 0, size = 1000;
-        while (true) {
-            var r = await db.from('store_points').select('name,status').range(from, from+size-1);
-            if (r.data) all = all.concat(r.data);
-            if (!r.data || r.data.length < size) break;
-            from += size;
+        var r = await db.from('store_points').select('name,status');
+        if (r.data) {
+            r.data.forEach(function(s) {
+                if (s.status === 'done') collectedMap[s.name] = true;
+            });
+            console.log('Supabase加载了 '+r.data.length+' 条采集记录');
         }
-        all.forEach(function(s) {
-            if (s.status === 'done') collectedMap[s.name] = true;
-        });
-        console.log('Supabase加载了 '+all.length+' 条采集记录');
         refreshAllMarkers();
     } catch(e) {
-        console.log('Supabase 加载失败，使用空状态:', e.message);
+        console.log('Supabase 加载失败:', e.message);
     }
 }
 
 async function saveCollected(name, isCollected) {
-    await db.from('store_points').upsert({
+    var r = await db.from('store_points').upsert({
         name: name,
-        status: isCollected ? 'done' : 'pending',
-        updated_at: new Date().toISOString()
-    }, {onConflict: 'name'});
+        status: isCollected ? 'done' : 'pending'
+    });
+    if (r.error) console.log('保存失败:', r.error.message);
 }
 
 function getFillColor(name){return collectedMap[name]?'#27ae60':'#e74c3c';}
