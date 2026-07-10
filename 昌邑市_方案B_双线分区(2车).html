@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>昌邑市无人车调度 — 方案B：双线分区（2车）</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#eee;height:100vh;overflow:hidden}
@@ -84,9 +85,36 @@ new AMap.Marker({position:[WH_LNG,WH_LAT],title:WH_NAME,icon:new AMap.Icon({size
     image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect x="4" y="4" width="28" height="28" rx="4" fill="#e94560" stroke="#fff" stroke-width="2"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">仓</text></svg>'),
     imageSize:new AMap.Size(36,36)})}).setMap(map);
 
-function loadCollected(){try{var r=localStorage.getItem('changyi_collected_B');return r?JSON.parse(r):{};}catch(e){return{};}}
-function saveCollected(d){localStorage.setItem('changyi_collected_B',JSON.stringify(d));}
-var collectedMap=loadCollected();
+// Supabase 初始化
+var SUPABASE_URL = 'https://cbtewohtwqpeslfkwbne.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_Ye28FxfcSWiRF7wQz-US3g_xuByXnb2';
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// 从 Supabase 加载采集状态
+var collectedMap = {};
+async function loadCollected() {
+    var all = [];
+    var from = 0, size = 1000;
+    while (true) {
+        var r = await db.from('store_points').select('name,status', {count:'exact'}).range(from, from+size-1);
+        if (r.data) all = all.concat(r.data);
+        if (!r.data || r.data.length < size) break;
+        from += size;
+    }
+    all.forEach(function(s) {
+        if (s.status === 'done') collectedMap[s.name] = true;
+    });
+    refreshAllMarkers();
+}
+
+async function saveCollected(name, isCollected) {
+    await db.from('store_points').upsert({
+        name: name,
+        status: isCollected ? 'done' : 'pending',
+        updated_at: new Date().toISOString()
+    }, {onConflict: 'name'});
+}
+
 function getFillColor(name){return collectedMap[name]?'#27ae60':'#e74c3c';}
 function buildInfoWindow(store){
     var c=collectedMap[store.name]||false;
@@ -96,11 +124,13 @@ function buildInfoWindow(store){
     var navUrl='https://uri.amap.com/navigation?to='+store.lng+','+store.lat+','+encodeURIComponent(store.name)+'&mode=car&callnative=1';
     return '<div class="info-window"><h4>'+store.name+'</h4><div class="addr">'+(store.address||'')+'</div><div>Seq:<b>'+store.seq+'</b> | 距仓:<b>'+store.dist_to_wh_km+'km</b></div><div style="display:flex;align-items:center;flex-wrap:wrap;"><button class="collect-btn '+cls+'" data-store="'+nm+'">'+txt+'</button><a class="nav-btn" href="'+navUrl+'" target="_blank">🧭 导航</a></div></div>';
 }
-document.addEventListener('click',function(e){
+document.addEventListener('click',async function(e){
     if(e.target.classList.contains('collect-btn')){
         var name=e.target.getAttribute('data-store');
         name=name.replace(/&#39;/g,"'").replace(/&quot;/g,'"');
-        collectedMap[name]=!collectedMap[name];saveCollected(collectedMap);
+        collectedMap[name]=!collectedMap[name];
+        var si = [] && false || allStoresData && allStoresData.find(function(s){return s.name === name;});
+        await saveCollected(name, collectedMap[name], si);
         e.target.className='collect-btn '+(collectedMap[name]?'collected':'not-collected');
         e.target.textContent=collectedMap[name]?'已采集':'未采集';
         refreshAllMarkers();
@@ -186,6 +216,9 @@ if(window.innerWidth<=768){
         btn.className='panel-hidden';
     },500);
 }
+
+// 页面加载时从 Supabase 同步采集状态
+loadCollected();
 </script>
 </body>
 </html>
