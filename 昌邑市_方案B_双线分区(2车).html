@@ -111,7 +111,7 @@ async function saveCollected(name, isCollected) {
     var r = await db.from('store_points').upsert({
         name: name,
         status: isCollected ? 'done' : 'pending'
-    });
+    }, {onConflict: 'name'});
     if (r.error) console.log('保存失败:', r.error.message);
 }
 
