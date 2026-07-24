@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>昌邑市无人车调度 — 方案B：双线分区（2车）</title>
-<!-- Supabase 已替换为 localStorage，不再需要外部依赖 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#eee;height:100vh;overflow:hidden}
@@ -217,34 +217,81 @@ new AMap.Marker({position:[WH_LNG,WH_LAT],title:WH_NAME,icon:new AMap.Icon({size
     image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect x="4" y="4" width="28" height="28" rx="4" fill="#e94560" stroke="#fff" stroke-width="2"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">仓</text></svg>'),
     imageSize:new AMap.Size(36,36)})}).setMap(map);
 
-// 采集状态存储 —— localStorage，稳定可靠
+// 采集状态存储 — Supabase(多设备互通) + localStorage(离线兜底)
+var SUPABASE_URL = 'https://cbtewohtwqpeslfkwbne.supabase.co';
+var SUPABASE_KEY = 'sb_publishable_Ye28FxfcSWiRF7wQz-US3g_xuByXnb2';
+var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 var collectedMap = {};
 var STORAGE_KEY = 'changyi_collected_stores_v2';
 
-function loadCollected() {
+// 1. 先从 localStorage 秒加载（不等待网络）
+function loadLocal() {
     try {
         var raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
             collectedMap = JSON.parse(raw);
-            console.log('localStorage 加载了 ' + Object.keys(collectedMap).length + ' 条采集记录');
+            console.log('localStorage 加载了 ' + Object.keys(collectedMap).length + ' 条');
         }
-    } catch(e) {
-        console.log('localStorage 加载失败:', e.message);
-        collectedMap = {};
-    }
+    } catch(e) {}
     refreshAllMarkers();
 }
 
-function saveCollected(name, isCollected) {
+// 2. 再从 Supabase 加载（覆盖本地，以服务器为准）
+async function loadCollected() {
+    loadLocal(); // 先秒显本地数据
     try {
-        if (isCollected) {
-            collectedMap[name] = true;
-        } else {
-            delete collectedMap[name];
+        var r = await db.from('store_points').select('name,status');
+        if (r.data && r.data.length > 0) {
+            collectedMap = {};
+            r.data.forEach(function(s) {
+                if (s.status === 'done') collectedMap[s.name] = true;
+            });
+            // 同步到 localStorage
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
+            console.log('Supabase 加载了 ' + r.data.length + ' 条，已同步到本地');
+        } else if (Object.keys(collectedMap).length > 0) {
+            // Supabase 无数据但本地有 → 上传本地数据到 Supabase
+            syncLocalToSupabase();
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
+        refreshAllMarkers();
     } catch(e) {
-        console.log('保存失败:', e.message);
+        console.log('Supabase 不可用，使用本地数据:', e.message);
+    }
+}
+
+// 3. 保存：同时写 Supabase + localStorage
+async function saveCollected(name, isCollected) {
+    // 先写本地
+    if (isCollected) {
+        collectedMap[name] = true;
+    } else {
+        delete collectedMap[name];
+    }
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
+    } catch(e) {}
+    // 再写 Supabase
+    try {
+        var r = await db.from('store_points').upsert({
+            name: name,
+            status: isCollected ? 'done' : 'pending'
+        }, {onConflict: 'name'});
+        if (r.error) console.log('Supabase 保存失败:', r.error.message);
+    } catch(e) {
+        console.log('Supabase 不可用，仅保存到本地');
+    }
+}
+
+// 4. 将本地数据同步到 Supabase
+async function syncLocalToSupabase() {
+    var names = Object.keys(collectedMap);
+    if (names.length === 0) return;
+    var rows = names.map(function(n) { return {name: n, status: 'done'}; });
+    try {
+        await db.from('store_points').upsert(rows, {onConflict: 'name'});
+        console.log('已同步 ' + rows.length + ' 条本地数据到 Supabase');
+    } catch(e) {
+        console.log('同步到 Supabase 失败:', e.message);
     }
 }
 
