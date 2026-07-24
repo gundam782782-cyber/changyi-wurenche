@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>昌邑市无人车调度 — 方案B：双线分区（2车）</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase 已替换为 localStorage，不再需要外部依赖 -->
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#eee;height:100vh;overflow:hidden}
@@ -217,34 +217,35 @@ new AMap.Marker({position:[WH_LNG,WH_LAT],title:WH_NAME,icon:new AMap.Icon({size
     image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect x="4" y="4" width="28" height="28" rx="4" fill="#e94560" stroke="#fff" stroke-width="2"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">仓</text></svg>'),
     imageSize:new AMap.Size(36,36)})}).setMap(map);
 
-// Supabase 初始化
-var SUPABASE_URL = 'https://cbtewohtwqpeslfkwbne.supabase.co';
-var SUPABASE_KEY = 'sb_publishable_Ye28FxfcSWiRF7wQz-US3g_xuByXnb2';
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// 从 Supabase 加载采集状态
+// 采集状态存储 —— localStorage，稳定可靠
 var collectedMap = {};
-async function loadCollected() {
+var STORAGE_KEY = 'changyi_collected_stores_v2';
+
+function loadCollected() {
     try {
-        var r = await db.from('store_points').select('name,status');
-        if (r.data) {
-            r.data.forEach(function(s) {
-                if (s.status === 'done') collectedMap[s.name] = true;
-            });
-            console.log('Supabase加载了 '+r.data.length+' 条采集记录');
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+            collectedMap = JSON.parse(raw);
+            console.log('localStorage 加载了 ' + Object.keys(collectedMap).length + ' 条采集记录');
         }
-        refreshAllMarkers();
     } catch(e) {
-        console.log('Supabase 加载失败:', e.message);
+        console.log('localStorage 加载失败:', e.message);
+        collectedMap = {};
     }
+    refreshAllMarkers();
 }
 
-async function saveCollected(name, isCollected) {
-    var r = await db.from('store_points').upsert({
-        name: name,
-        status: isCollected ? 'done' : 'pending'
-    }, {onConflict: 'name'});
-    if (r.error) console.log('保存失败:', r.error.message);
+function saveCollected(name, isCollected) {
+    try {
+        if (isCollected) {
+            collectedMap[name] = true;
+        } else {
+            delete collectedMap[name];
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
+    } catch(e) {
+        console.log('保存失败:', e.message);
+    }
 }
 
 function getFillColor(name){return collectedMap[name]?'#27ae60':'#e74c3c';}
@@ -264,7 +265,7 @@ document.addEventListener('click',function(e){
         e.target.className='collect-btn '+(collectedMap[name]?'collected':'not-collected');
         e.target.textContent=collectedMap[name]?'已采集':'未采集';
         refreshAllMarkers();
-        saveCollected(name, collectedMap[name]).catch(function(){});
+        saveCollected(name, collectedMap[name]);
     }
 });
 
