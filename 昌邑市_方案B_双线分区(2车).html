@@ -53,9 +53,11 @@ h2{font-size:17px;margin-bottom:4px;color:#e94560}
     <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>未采集</div>
   </div>
   <div class="stat"><span>已采集</span><span id="collected-count">- / 267</span></div>
+  <div class="stat"><span>云端同步</span><span id="cloud-status" style="color:#95a5a6">☁️ 检测中…</span></div>
   <div style="display:flex;gap:6px;margin:8px 0">
     <button onclick="exportState()" style="flex:1;padding:7px;background:#1677ff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold">📤 导出备份</button>
     <button onclick="importState()" style="flex:1;padding:7px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold">📥 导入备份</button>
+    <button onclick="setupToken()" style="flex:1;padding:7px;background:#0f3460;color:#4ecdc4;border:1px solid #4ecdc4;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold">☁️ 设置Token</button>
     <input type="file" id="import-file" accept=".json,application/json" style="display:none">
   </div>
   <div class="route-select"><select id="routeSelect" onchange="switchZone(this)">
@@ -286,6 +288,7 @@ async function saveCollected(name, isCollected) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
     } catch(e) {}
+    scheduleCloudWrite(); // 防抖推送到 GitHub 云端（git 自动备份）
     // 再写 Supabase（纯本地模式下跳过）
     if (!db) return;
     try {
@@ -403,6 +406,7 @@ document.addEventListener('change', function(e){
                 }
                 try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap)); } catch(e){}
                 refreshAllMarkers();
+                scheduleCloudWrite();
                 alert('导入成功：新增 ' + added + ' 条，当前共 ' + Object.keys(collectedMap).length + ' 条已采集');
             } catch(err) {
                 alert('文件格式错误，无法解析');
@@ -411,6 +415,117 @@ document.addEventListener('change', function(e){
         reader.readAsText(f);
     }
 });
+
+// ===== 云端同步 — GitHub 仓库存储（每次保存 = 一次 git 自动备份）=====
+var GH_OWNER = 'gundam782782-cyber';
+var GH_REPO = 'changyi-wurenche';
+var GH_PATH = 'state_B.json';
+var GH_TOKEN_KEY = 'changyi_github_token';
+var CLOUD_STATUS = {
+    synced:   ['☁️ 已同步', '#27ae60'],
+    syncing:  ['☁️ 同步中…', '#f39c12'],
+    offline:  ['☁️ 未设Token', '#95a5a6'],
+    error:    ['☁️ 同步失败', '#e74c3c'],
+    tokenbad: ['☁️ Token无效', '#e74c3c']
+};
+
+function getGhToken(){ try { return localStorage.getItem(GH_TOKEN_KEY)||''; } catch(e){ return ''; } }
+function setCloudStatus(state){
+    var el = document.getElementById('cloud-status');
+    if (!el) return;
+    var c = CLOUD_STATUS[state] || CLOUD_STATUS.offline;
+    el.textContent = c[0]; el.style.color = c[1];
+}
+function b64ToUtf8(b64){
+    var bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (var i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+}
+function utf8ToB64(str){ return btoa(unescape(encodeURIComponent(str))); }
+
+// 页面加载：从 GitHub 拉取线上状态，并集合并入本地
+async function loadCloud(){
+    if (getGhToken()) setCloudStatus('syncing');
+    try {
+        var r = await fetch('https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_PATH, {
+            headers: { 'Accept': 'application/vnd.github+json' }
+        });
+        if (r.ok) {
+            var j = await r.json();
+            var cloud = (JSON.parse(b64ToUtf8(j.content))).collected || {};
+            var added = 0;
+            for (var k in cloud) { if (cloud[k] && !collectedMap[k]) { collectedMap[k] = true; added++; } }
+            if (added > 0) {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap)); } catch(e){}
+                refreshAllMarkers();
+                scheduleCloudWrite(); // 把合并结果推回云端
+            }
+            setCloudStatus(getGhToken() ? 'synced' : 'offline');
+            console.log('GitHub云端: ' + (added>0 ? '合并 '+added+' 条新采集' : '一致') + '（共 '+Object.keys(cloud).length+' 条）');
+        } else if (r.status === 404) {
+            // 云端尚无状态文件：本地有数据 → 首次自动创建上传
+            if (Object.keys(collectedMap).length > 0) scheduleCloudWrite();
+            setCloudStatus(getGhToken() ? 'syncing' : 'offline');
+            console.log('GitHub云端暂无状态文件');
+        } else {
+            console.log('GitHub云端读取失败:', r.status);
+            setCloudStatus(getGhToken() ? 'error' : 'offline');
+        }
+    } catch(e) {
+        console.log('GitHub云端不可用:', e.message);
+        setCloudStatus(getGhToken() ? 'error' : 'offline');
+    }
+}
+
+// 状态变更后防抖写入（3秒内最后一次变更才写，离页时强制冲刷）
+var cloudTimer = null;
+function scheduleCloudWrite(){
+    if (cloudTimer) clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(flushCloudWrite, 3000);
+}
+async function flushCloudWrite(){
+    var token = getGhToken();
+    if (!token) { setCloudStatus('offline'); return; }
+    setCloudStatus('syncing');
+    try {
+        var payload = { collected: collectedMap, updated_at: new Date().toISOString() };
+        var content = utf8ToB64(JSON.stringify(payload));
+        // 先取当前文件 sha（不存在则为 null，首次创建）
+        var sha = null;
+        var get = await fetch('https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_PATH, { headers: { 'Accept':'application/vnd.github+json' } });
+        if (get.ok) sha = (await get.json()).sha;
+        var put = await fetch('https://api.github.com/repos/'+GH_OWNER+'/'+GH_REPO+'/contents/'+GH_PATH, {
+            method: 'PUT',
+            headers: { 'Accept':'application/vnd.github+json', 'Content-Type':'application/json', 'Authorization':'Bearer '+token },
+            body: JSON.stringify({ message: '采集状态同步 ' + new Date().toLocaleString('zh-CN'), content: content, sha: sha || undefined })
+        });
+        if (put.ok) {
+            setCloudStatus('synced');
+            console.log('☁️ 已保存到GitHub（自动生成备份提交）');
+        } else {
+            var e2 = await put.json();
+            console.log('☁️ 保存失败:', e2.message);
+            setCloudStatus((put.status===401||put.status===403) ? 'tokenbad' : 'error');
+        }
+    } catch(e) {
+        console.log('☁️ 保存失败:', e.message);
+        setCloudStatus('error');
+    }
+}
+// 离开页面时尽力冲刷一次
+document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden') flushCloudWrite();
+});
+
+// 设置 GitHub Token（存本机浏览器，仅本机用于写云端）
+function setupToken(){
+    var t = prompt('粘贴你的 GitHub Token（需勾选 repo 权限）：\n创建路径：github.com → 头像 → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token', getGhToken());
+    if (t === null) return;
+    t = t.trim();
+    try { localStorage.setItem(GH_TOKEN_KEY, t); } catch(e){}
+    if (t) { setCloudStatus('syncing'); flushCloudWrite(); }
+    else setCloudStatus('offline');
+}
 
 function drawStoreMarker(store,zoneId){
     var m=new AMap.Marker({position:[store.lng,store.lat],title:store.name,map:map,
@@ -481,8 +596,9 @@ if(window.innerWidth<=768){
     },500);
 }
 
-// 页面加载时从 Supabase 同步采集状态
+// 页面加载：本地恢复 → 旧Supabase(已失效忽略) → GitHub云端合并
 loadCollected();
+loadCloud();
 </script>
 </body>
 </html>
