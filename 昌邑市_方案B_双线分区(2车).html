@@ -47,15 +47,21 @@ h2{font-size:17px;margin-bottom:4px;color:#e94560}
   <button id="toggle-btn" onclick="togglePanel()" title="收起/展开面板">信息栏</button>
   <h2>🚛 方案B：双线分区（2车）</h2>
   <div class="stat"><span>仓库</span><span>中盈潍坊仓</span></div>
-  <div class="stat"><span>门店总数</span><span>268</span></div>
+  <div class="stat"><span>门店总数</span><span>267</span></div>
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:#27ae60"></div>已采集</div>
     <div class="legend-item"><div class="legend-dot" style="background:#e74c3c"></div>未采集</div>
   </div>
+  <div class="stat"><span>已采集</span><span id="collected-count">- / 267</span></div>
+  <div style="display:flex;gap:6px;margin:8px 0">
+    <button onclick="exportState()" style="flex:1;padding:7px;background:#1677ff;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold">📤 导出备份</button>
+    <button onclick="importState()" style="flex:1;padding:7px;background:#f39c12;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:bold">📥 导入备份</button>
+    <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+  </div>
   <div class="route-select"><select id="routeSelect" onchange="switchZone(this)">
-      <option value="all">全部线路 — 268 店</option>
+      <option value="all">全部线路 — 267 店</option>
       <option value="1">区域1 — 134 店 | 307.7km</option>
-      <option value="2">区域2 — 134 店 | 278.2km</option>
+      <option value="2">区域2 — 133 店 | 278.2km</option>
     </select></div>
 
   
@@ -67,7 +73,7 @@ h2{font-size:17px;margin-bottom:4px;color:#e94560}
     </div>
   </div>
   <div class="zone" id="zone-section-2">
-    <h4><span style="color:#e94560">●</span> 区域2 — 134 店 | 278.2km</h4>
+    <h4><span style="color:#e94560">●</span> 区域2 — 133 店 | 278.2km</h4>
     <div class="store-list" id="store-list-2">
       <div class="store-item" data-zone="2"><span class="seq">1</span>昌邑市都昌街道北兴福村第二卫生室</div>
 <div class="store-item" data-zone="2"><span class="seq">2</span>昌邑市都昌街道西永安村第三卫生室</div>
@@ -195,12 +201,12 @@ h2{font-size:17px;margin-bottom:4px;color:#e94560}
 <div class="store-item" data-zone="2"><span class="seq">124</span>昌邑市奎聚街道东逄翟村卫生室</div>
 <div class="store-item" data-zone="2"><span class="seq">125</span>昌邑市奎聚街道西逄泽村生室</div>
 <div class="store-item" data-zone="2"><span class="seq">126</span>昌邑市奎聚街道徐家鄑水村卫生室</div>
-<div class="store-item" data-zone="2"><span class="seq">127</span>昌邑市晟康医药有限公司</div><div class="store-item" data-zone="2"><span class="seq">127</span>昌邑市都昌街道南褚庄村卫生室</div>
-<div class="store-item" data-zone="2"><span class="seq">128</span>昌邑市都昌街道中裴庄村卫生室</div>
-<div class="store-item" data-zone="2"><span class="seq">129</span>昌邑市都昌街道双台社区卫生服务中心</div>
-<div class="store-item" data-zone="2"><span class="seq">130</span>昌邑市都昌街道东侯富庄村卫生室</div>
-<div class="store-item" data-zone="2"><span class="seq">131</span>昌邑市都昌街道中侯富庄村卫生室</div>
-<div class="store-item" data-zone="2"><span class="seq">132</span>昌邑市都昌街道双台二村卫生室</div>
+<div class="store-item" data-zone="2"><span class="seq">127</span>昌邑市晟康医药有限公司</div><div class="store-item" data-zone="2"><span class="seq">128</span>昌邑市都昌街道南褚庄村卫生室</div>
+<div class="store-item" data-zone="2"><span class="seq">129</span>昌邑市都昌街道中裴庄村卫生室</div>
+<div class="store-item" data-zone="2"><span class="seq">130</span>昌邑市都昌街道双台社区卫生服务中心</div>
+<div class="store-item" data-zone="2"><span class="seq">131</span>昌邑市都昌街道东侯富庄村卫生室</div>
+<div class="store-item" data-zone="2"><span class="seq">132</span>昌邑市都昌街道中侯富庄村卫生室</div>
+<div class="store-item" data-zone="2"><span class="seq">133</span>昌邑市都昌街道双台二村卫生室</div>
     </div>
     </div>
   </div>
@@ -217,10 +223,14 @@ new AMap.Marker({position:[WH_LNG,WH_LAT],title:WH_NAME,icon:new AMap.Icon({size
     image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"><rect x="4" y="4" width="28" height="28" rx="4" fill="#e94560" stroke="#fff" stroke-width="2"/><text x="18" y="22" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold">仓</text></svg>'),
     imageSize:new AMap.Size(36,36)})}).setMap(map);
 
-// 采集状态存储 — Supabase(多设备互通) + localStorage(离线兜底)
+// 采集状态存储 — localStorage(唯一权威) + Supabase(可选云端备份)
+// 注意：Supabase 项目已暂停/删除(DNS 解析不到)，云端数据已不可用，
+//       本地 localStorage 是唯一数据源。Supabase 仅当可用时做增量合并，绝不覆盖本地。
 var SUPABASE_URL = 'https://cbtewohtwqpeslfkwbne.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_Ye28FxfcSWiRF7wQz-US3g_xuByXnb2';
-var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var db = null;
+try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
+catch(e) { console.log('Supabase SDK 不可用，进入纯本地模式'); }
 var collectedMap = {};
 var STORAGE_KEY = 'changyi_collected_stores_v2';
 
@@ -236,19 +246,25 @@ function loadLocal() {
     refreshAllMarkers();
 }
 
-// 2. 再从 Supabase 加载（覆盖本地，以服务器为准）
+// 2. 再从 Supabase 增量合并（只补充，绝不覆盖本地已采集记录）
 async function loadCollected() {
-    loadLocal(); // 先秒显本地数据
+    loadLocal(); // 先秒显本地数据（localStorage 是权威）
+    if (!db) { console.log('纯本地模式：已从 localStorage 恢复采集状态'); return; }
     try {
-        var r = await db.from('store_points').select('name,status');
+        // 5 秒超时保护：云端挂了不能卡住页面
+        var r = await Promise.race([
+            db.from('store_points').select('name,status'),
+            new Promise(function(resolve, reject) {
+                setTimeout(function(){ reject(new Error('Supabase 请求超时')); }, 5000);
+            })
+        ]);
         if (r.data && r.data.length > 0) {
-            collectedMap = {};
+            // 合并：云端有而本地无的 → 补进来；本地已有的 → 保留（并集，防止云端旧数据误删本地）
             r.data.forEach(function(s) {
-                if (s.status === 'done') collectedMap[s.name] = true;
+                if (s.status === 'done' && !collectedMap[s.name]) collectedMap[s.name] = true;
             });
-            // 同步到 localStorage
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
-            console.log('Supabase 加载了 ' + r.data.length + ' 条，已同步到本地');
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap)); } catch(e){}
+            console.log('Supabase 合并 ' + r.data.length + ' 条，本地保留 ' + Object.keys(collectedMap).length + ' 条');
         } else if (Object.keys(collectedMap).length > 0) {
             // Supabase 无数据但本地有 → 上传本地数据到 Supabase
             syncLocalToSupabase();
@@ -270,7 +286,8 @@ async function saveCollected(name, isCollected) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap));
     } catch(e) {}
-    // 再写 Supabase
+    // 再写 Supabase（纯本地模式下跳过）
+    if (!db) return;
     try {
         var r = await db.from('store_points').upsert({
             name: name,
@@ -284,6 +301,7 @@ async function saveCollected(name, isCollected) {
 
 // 4. 将本地数据同步到 Supabase
 async function syncLocalToSupabase() {
+    if (!db) return;
     var names = Object.keys(collectedMap);
     if (names.length === 0) return;
     var rows = names.map(function(n) { return {name: n, status: 'done'}; });
@@ -325,7 +343,74 @@ function refreshAllMarkers(){
             image:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="'+c+'" stroke="#fff" stroke-width="1.5"/></svg>'),
             imageSize:new AMap.Size(16,16)}));
     });
+    applyStoreList();
+    updateCount();
 }
+
+// 侧栏门店列表同步标色（已采集 → 绿色底 + 左边条）
+function applyStoreList(){
+    document.querySelectorAll('.store-item').forEach(function(el){
+        var name = el.innerText.replace(/^\s*\d+\s*/, '').trim();
+        if (collectedMap[name]) {
+            el.style.background = 'rgba(39,174,96,.16)';
+            el.style.borderLeft = '3px solid #27ae60';
+        } else {
+            el.style.background = '';
+            el.style.borderLeft = '';
+        }
+    });
+}
+
+// 已采集计数显示
+function updateCount(){
+    var el = document.getElementById('collected-count');
+    if (el) el.textContent = Object.keys(collectedMap).length + ' / 267';
+}
+
+// 导出采集状态备份（JSON）— 云端已不可用，这是唯一持久备份途径
+function exportState(){
+    var data = {
+        app: 'changyi-wurenche',
+        version: 2,
+        exported_at: new Date().toISOString(),
+        collected: collectedMap
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '昌邑采集状态备份_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+}
+
+// 导入采集状态备份（JSON），与现有数据合并
+function importState(){
+    document.getElementById('import-file').value = '';
+    document.getElementById('import-file').click();
+}
+document.addEventListener('change', function(e){
+    if (e.target && e.target.id === 'import-file') {
+        var f = e.target.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function(){
+            try {
+                var obj = JSON.parse(reader.result);
+                var list = (obj && obj.collected) ? obj.collected : obj; // 兼容包装/裸格式
+                var added = 0;
+                for (var k in list) {
+                    if (list[k] && !collectedMap[k]) { collectedMap[k] = true; added++; }
+                }
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(collectedMap)); } catch(e){}
+                refreshAllMarkers();
+                alert('导入成功：新增 ' + added + ' 条，当前共 ' + Object.keys(collectedMap).length + ' 条已采集');
+            } catch(err) {
+                alert('文件格式错误，无法解析');
+            }
+        };
+        reader.readAsText(f);
+    }
+});
 
 function drawStoreMarker(store,zoneId){
     var m=new AMap.Marker({position:[store.lng,store.lat],title:store.name,map:map,
